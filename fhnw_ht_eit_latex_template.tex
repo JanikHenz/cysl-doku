@@ -1,0 +1,112 @@
+\documentclass[final]{fhnwreport}         %[mode] = draft or final
+\input{fhnwheader}                        %loads all packages, definitions and settings	
+
+%%%%% Logo: Hochschule HTU oder HSI, Sprache DE oder EN:
+%\newcommand{\logofilename}{FHNW_HTU_DE}
+%\newcommand{\logofilename}{FHNW_HTU_EN}
+\newcommand{\logofilename}{FHNW_HSI_DE}
+%\newcommand{\logofilename}{FHNW_HSI_EN}
+%%%%%
+%%%%% Bibliographie entweder im IEEE- oder im APA-Stil:
+\usepackage[style=ieee,urldate=comp,backend=biber]{biblatex}
+%\usepackage[style=apa,urldate=comp,backend=biber]{biblatex}
+%%%%%
+\addbibresource{literature/beispiel_bib.bib}
+
+% Python-Listings-Style fuer Code-Beispiele
+\lstdefinestyle{custompython}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  language=Python,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{blue},
+  stringstyle=\color{orange},
+}
+
+\title{Sicherheitspatch: IDOR im FleetOptima-Backend}
+\author{Sicherheitsrelevanter Patch -- Open-Source-Projekt dnchub-app}
+\date{Windisch, April 2026}
+
+\begin{document}
+
+\pagenumbering{roman}
+
+%%---TITLEPAGE---------------------------------------------------------------------------
+\selectlanguage{ngerman}                  %ngerman or english
+\maketitle
+
+\vfill
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{titleimage.jpg}
+\end{figure}
+
+\vfill
+
+\begin{tabular}{@{}p{5cm} l}
+    Studentin/Student & Janik Henz              \\[2ex]
+    Dozent/Betreuer   & Martin Gwerder          \\[2ex]
+    Studiengang       & Informatik Bsc          \\[2ex]
+    Semester          & Frühjahrssemester 2026  \\[2ex]
+    Modul             & Cyber Sicherheit (CySL) \\[2ex]
+    Vereinbarung      & öffentlich
+\end{tabular}
+
+% The terms to be used in an English report are: Student, Expert, Supervisor, Client, Study Program, Project Number, Agreement.
+
+\vspace*{4ex}
+% Beispiel für Logo Industriepartner
+%\begin{tikzpicture}[remember picture,overlay,every node/.style={anchor=north east}]
+%  \node at (current page.north east) [xshift=-1cm, yshift=-0.5cm] {\includegraphics[width=4cm]{stoica-ionela-CoNsEK5iHug-unsplash.png}};
+%\end{tikzpicture}
+
+\clearpage
+
+%%---ABSTRACT----------------------------------------------------------------------------
+\selectlanguage{ngerman}				%ngerman or english
+\thispagestyle{empty}
+\include{sections/abstract}
+
+%%---TABLE OF CONTENTS-------------------------------------------------------------------	
+\selectlanguage{ngerman}				%ngerman or english
+\tableofcontents
+\clearpage
+
+\listoffigures
+\listoftables
+\cleardoublepage
+
+%%---TEXT--------------------------------------------------------------------------------
+\pagenumbering{arabic}
+\include{sections/einleitung}
+\include{sections/grundlagen}
+\include{sections/this}
+\include{sections/that}
+\include{sections/testing}
+\include{sections/schluss}
+
+%%---BIBLIOGRAPHY------------------------------------------------------------------------
+{\sloppypar
+    \printbibliography[heading=bibintoc, title=Quellenverzeichnis]
+}
+
+%%---APPENDIX----------------------------------------------------------------------------
+\include{sections/eigenstaendigkeit}
+\selectlanguage{english}				%ngerman or english
+\include{sections/authenticity}
+\selectlanguage{ngerman}				%ngerman or english
+\include{sections/appendix}
+
+%%---NOTES for DEBUG---------------------------------------------------------------------
+%\newpage
+%\listoftodos[\section{Todo-Notes}]
+%\clearpage
+
+\end{document}

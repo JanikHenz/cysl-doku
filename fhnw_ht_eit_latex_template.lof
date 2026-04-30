@@ -1,0 +1,13 @@
+\babel@toc {ngerman}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\babel@toc {english}{}\relax 
+\contentsline {figure}{\numberline {A.1}{\ignorespaces Das Opfer legt im Fleet-Management ein Fahrzeug an.\relax }}{22}{figure.caption.13}%
+\contentsline {figure}{\numberline {A.2}{\ignorespaces Der Angreifer kann das Fahrzeug des Opfers über die direkte Objekt-ID aufrufen.\relax }}{22}{figure.caption.14}%
+\contentsline {figure}{\numberline {A.3}{\ignorespaces Soft-gelöschte Datensätze bleiben vor dem Patch in der Oberfläche weiterhin erreichbar.\relax }}{23}{figure.caption.15}%
+\contentsline {figure}{\numberline {A.4}{\ignorespaces Erzeugung eines Fahrzeugs im Kontext des Opfers per API.\relax }}{23}{figure.caption.16}%
+\contentsline {figure}{\numberline {A.5}{\ignorespaces Der Angreifer verwendet dieselbe UUID für einen unautorisierten GET-Zugriff.\relax }}{24}{figure.caption.17}%
+\contentsline {figure}{\numberline {A.6}{\ignorespaces Unautorisierter DELETE-Aufruf des Angreifers gegen das Fahrzeug des Opfers.\relax }}{24}{figure.caption.18}%
+\contentsline {figure}{\numberline {A.7}{\ignorespaces Das soft-gelöschte Fahrzeug bleibt vor dem Patch per direkter ID-Abfrage sichtbar.\relax }}{25}{figure.caption.19}%
+\babel@toc {ngerman}{}\relax 

@@ -1,0 +1,365 @@
+\section{Analyse der Schwachstelle}
+\label{sec:analyse}
+
+\subsection{Projektstruktur}
+
+Das Open-Source-Projekt \emph{dnchub-app} (FleetOptima) ist ein mandantenfähiges
+Flottenmanagement-System auf GitHub \cite{github_issue_5}. Das Python/FastAPI-Backend
+ist klassisch geschichtet:
+
+\begin{itemize}
+    \item \textbf{API-Layer:} FastAPI-Router unter \texttt{app/api/v1/}
+    \item \textbf{Service-Layer:} Geschäftslogik in \texttt{app/shared/services/}
+    \item \textbf{Model-Layer:} SQLAlchemy-Modelle in \texttt{app/models/}
+\end{itemize}
+
+Das gesamte Mandanten-Datenmodell basiert auf einem \texttt{organization\_id}-Feld,
+das in allen geschäftsrelevanten Tabellen vorhanden ist und die logische Trennung
+zwischen Mandanten sicherstellen soll.
+
+\subsection{Phase 1: Codeanalyse}
+
+\subsubsection{Schritt 1: Analyse der Klasse \texttt{BaseService}}
+
+Die zentrale Klasse \texttt{BaseService} befindet sich in
+\texttt{backend/app/shared/services/base.py} und implementiert sieben
+Standard-CRUD-Operationen, die von allen Modulen des Systems geerbt werden.
+Beim Durchsehen der Klasse fällt eine konsistente Inkonsistenz auf:
+die Listenmethoden (\texttt{get\_multi}, \texttt{count}) implementieren korrekt
+sowohl einen Mandanten- als auch einen Soft-Delete-Filter, die
+Einzelzugriffsmethoden (\texttt{get}, \texttt{get\_or\_404}) hingegen nicht.
+
+Tabelle \ref{tab:baseservice_audit} zeigt den Sicherheitsstatus aller Methoden:
+
+\begin{table}[H]
+    \begin{center}
+        \renewcommand{\arraystretch}{1.4}
+        \begin{tabular}{|l|c|c|p{4.5cm}|}
+            \hline
+            \textbf{Methode}        & \textbf{IDOR-sicher}           & \textbf{Soft-Delete}           & \textbf{Anmerkung}                    \\
+            \hline
+            \texttt{get()}          & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Nur \texttt{WHERE id = ?}             \\
+            \texttt{get\_or\_404()} & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Delegiert an \texttt{get()}           \\
+            \texttt{get\_multi()}   & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & \texttt{hasattr}-Guards korrekt       \\
+            \texttt{count()}        & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & \texttt{hasattr}-Guards korrekt       \\
+            \texttt{create()}       & --                             & --                             & Nicht betroffen                       \\
+            \texttt{update()}       & --                             & --                             & Nicht betroffen                       \\
+            \texttt{delete()}       & \textcolor{red}{Nein}          & --                             & Ruft ungesichertes \texttt{get()} auf \\
+            \hline
+        \end{tabular}
+    \end{center}
+    \caption{Sicherheitsaudit der Methoden in \texttt{BaseService} (Phase 1, Schritt 1)}
+    \label{tab:baseservice_audit}
+\end{table}
+
+Listing \ref{lst:base_vulnerable} zeigt den verwundbaren Code. In \texttt{get()} wird
+ausschliesslich nach \texttt{id} gefiltert, weder \texttt{organization\_id} noch
+\texttt{deleted\_at} werden geprüft. Da \texttt{get\_or\_404()} intern \texttt{get()}
+aufruft, erbt es beide Schwachstellen gleich mit.
+
+\begin{lstlisting}[style=custompython,
+  caption={Verwundbare Methoden in \texttt{base.py} -- Zeilen 24--34},
+  label={lst:base_vulnerable}]
+def get(self, db: Session, id: str) -> ModelType | None:
+    """Get a single record by ID."""
+    # PROBLEM: kein organization_id-Filter, kein deleted_at-Filter
+    result = db.execute(select(self.model).where(self.model.id == id))
+    return result.scalar_one_or_none()
+
+def get_or_404(self, db: Session, id: str) -> ModelType:
+    """Get a single record by ID or raise NotFoundError."""
+    # PROBLEM: delegiert an get() -- erbt beide Schwachstellen
+    obj = self.get(db, id)
+    if obj is None:
+        raise NotFoundError(self.model.__name__, id)
+    return obj
+\end{lstlisting}
+
+Zum Vergleich zeigt Listing \ref{lst:base_correct} das Referenzmuster aus
+\texttt{get\_multi()}, das beide Filter korrekt per \texttt{hasattr}-Guard implementiert:
+
+\begin{lstlisting}[style=custompython,
+  caption={Korrektes Referenzmuster aus \texttt{get\_multi()} -- Zeilen 36--57},
+  label={lst:base_correct}]
+def get_multi(self, db, *, organization_id=None,
+              include_deleted=False):
+    query = select(self.model)
+    # Korrekt: Mandanten-Scoping mit Guard
+    if organization_id and hasattr(self.model, "organization_id"):
+        query = query.where(
+            self.model.organization_id == organization_id)
+    # Korrekt: Soft-Delete-Filter mit Guard
+    if not include_deleted and hasattr(self.model, "deleted_at"):
+        query = query.where(self.model.deleted_at.is_(None))
+    ...
+\end{lstlisting}
+
+Ein weiterer sicherheitsrelevanter Befund: Auch \texttt{delete()} ruft intern das
+ungesicherte \texttt{get()} auf. Ein Angreifer könnte damit nicht nur Datensätze
+fremder Mandanten lesen, sondern diese auch soft-löschen, und das ohne jede
+\texttt{organization\_id}-Prüfung.
+
+\subsubsection{Schritt 2: Identifikation aller Aufrufer von \texttt{get\_or\_404()}}
+
+Eine Volltextsuche im gesamten Backend (\texttt{grep -r "get\_or\_404"}) ergibt
+\textbf{83 Aufrufstellen} in 20 Quelldateien. Tabelle \ref{tab:callers_summary}
+fasst die Verteilung nach Modul und Kategorie zusammen.
+
+\begin{table}[H]
+    \begin{center}
+        \renewcommand{\arraystretch}{1.4}
+        \begin{tabular}{|l|r|l|}
+            \hline
+            \textbf{Datei / Modul}                               & \textbf{Aufrufe} & \textbf{Besonderheit}                     \\
+            \hline
+            \texttt{shared/api/organizations.py}                 & 5                & Wurzelelement, kein \texttt{org\_id}-Feld \\
+            \texttt{shared/api/users.py}                         & 2                & Admin-only, aber Org-Scoping fehlt        \\
+            \texttt{shared/api/notifications.py}                 & 2                & --                                        \\
+            \texttt{shared/api/documents.py}                     & 4                & --                                        \\
+            \texttt{shared/api/employees.py}                     & 3                & --                                        \\
+            \texttt{shared/api/cost\_centers.py}                 & 5                & 2 Services betroffen                      \\
+            \hline
+            \texttt{modules/fleet/api/vehicles.py}               & 5                & 2 Services betroffen                      \\
+            \texttt{modules/fleet/api/maintenance.py}            & 7                & 2 Services betroffen                      \\
+            \texttt{modules/fleet/api/gps.py}                    & 7                & 3 Services betroffen                      \\
+            \texttt{modules/fleet/api/tickets.py}                & 4                & --                                        \\
+            \texttt{modules/fleet/api/fuel.py}                   & 2                & --                                        \\
+            \texttt{modules/fleet/api/fuel\_pumps.py}            & 2                & --                                        \\
+            \texttt{modules/fleet/api/fuel\_pump\_deliveries.py} & 2                & --                                        \\
+            \texttt{modules/fleet/services/fuel\_pump.py}        & 4                & \texttt{self.get\_or\_404()}              \\
+            \texttt{modules/fleet/services/fuel*.py}             & 2                & Cross-Service-Aufruf                      \\
+            \hline
+            \texttt{modules/tools/api/tools.py}                  & 3                & --                                        \\
+            \texttt{modules/tools/api/tool\_cases.py}            & 4                & --                                        \\
+            \texttt{modules/tools/api/consumables.py}            & 3                & --                                        \\
+            \texttt{modules/tools/api/tool\_*.py}                & 7                & 4 Dateien                                 \\
+            \texttt{modules/tools/services/tool\_assignment.py}  & 1                & \texttt{self.get\_or\_404()}              \\
+            \hline
+            \texttt{modules/sat/api/*.py}                        & 9                & 5 Dateien                                 \\
+            \hline
+            \textbf{Total}                                       & \textbf{83}      &                                           \\
+            \hline
+        \end{tabular}
+    \end{center}
+    \caption{Verteilung der \texttt{get\_or\_404()}-Aufrufstellen nach Modul (Phase 1, Schritt 2)}
+    \label{tab:callers_summary}
+\end{table}
+
+Aus der Analyse ergeben sich drei Kategorien mit unterschiedlichem Handlungsbedarf:
+
+\begin{enumerate}
+    \item \textbf{Kategorie A: Kein Fix notwendig (\texttt{Organization}-Modell)}\\
+          \texttt{organizations.py} greift auf das \texttt{Organization}-Modell zu, das
+          das Wurzelelement der Mandantenhierarchie ist und selbst kein
+          \texttt{organization\_id}-Attribut besitzt. Endpunkte sind entweder
+          Admin-only oder lesen die eigene Organisation via
+          \texttt{current\_user.organization\_id}; kein IDOR-Risiko.
+
+    \item \textbf{Kategorie B: Partieller Fix (Admin-only-Endpunkte, \texttt{users.py})}\\
+          Die beiden Aufrufe in \texttt{users.py} (Zeilen 101, 113) sind durch
+          \texttt{AdminUserDep} geschützt; ein regulärer Nutzer kann sie nicht
+          erreichen. Dennoch sollte für Defense-in-Depth ein Org-Scoping ergänzt werden,
+          um Cross-Tenant-Zugriffe auch bei künftigen Rechteänderungen auszuschliessen.
+
+    \item \textbf{Kategorie C: Vollständiger Fix (alle übrigen 76 Aufrufstellen)}\\
+          Alle anderen Endpunkte verarbeiten mandantenspezifische Ressourcen und
+          übergeben dem Aufruf kein \texttt{organization\_id}-Argument. Jeder dieser
+          Aufrufe muss auf die neue Signatur umgerüstet werden und
+          \texttt{current\_user.organization\_id} übergeben.
+\end{enumerate}
+
+Auffällig dabei: In den Service-Klassen \texttt{fuel\_pump.py} (4x) und
+\texttt{tool\_assignment.py} (1x) wird \texttt{self.get\_or\_404()} intern genutzt,
+d.h. der Aufruf erfolgt nicht aus dem API-Layer, sondern aus einem anderen Service.
+Hier muss \texttt{organization\_id} durch den Service-Aufrufer durchgereicht werden.
+
+
+\subsubsection{Schritt 3: Modelle mit \texttt{organization\_id} und \texttt{deleted\_at}}
+
+Für die korrekte Implementierung des Fixes muss bekannt sein, welche Modelle welche
+Felder tragen, da \texttt{BaseService} generisch über alle Modelltypen operiert.
+Die Analyse aller 31 SQLAlchemy-Modell-Klassen ergibt die Klassifikation in
+Tabelle \ref{tab:model_matrix}.
+
+\begin{table}[H]
+    \begin{center}
+        \renewcommand{\arraystretch}{1.3}
+        \begin{tabular}{|l|c|c|l|}
+            \hline
+            \textbf{Modell-Klasse}        & \textbf{org\_id}               & \textbf{deleted\_at}           & \textbf{Kategorie} \\
+            \hline
+            \multicolumn{4}{|l|}{\textit{Modul: fleet}}                                                                          \\
+            \hline
+            Vehicle, VehicleGroup         & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            FuelEntry, FuelPump           & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            FuelPumpDelivery              & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            MaintenanceTask / Schedule    & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            Ticket, Geofence              & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            Trip                          & \textcolor{green!60!black}{Ja} & \textcolor{red}{Nein}          & Fix B              \\
+            GpsAlert                      & \textcolor{green!60!black}{Ja} & \textcolor{red}{Nein}          & Fix B              \\
+            VehicleGroupMember            & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Kein Fix           \\
+            TripPosition                  & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Kein Fix           \\
+            \hline
+            \multicolumn{4}{|l|}{\textit{Modul: tools}}                                                                          \\
+            \hline
+            Tool, ToolCase, ToolCategory  & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            ToolLocation, Consumable      & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            ToolAssignment                & \textcolor{green!60!black}{Ja} & \textcolor{red}{Nein}          & Fix B              \\
+            ToolCalibration               & \textcolor{green!60!black}{Ja} & \textcolor{red}{Nein}          & Fix B              \\
+            \hline
+            \multicolumn{4}{|l|}{\textit{Modul: sat}}                                                                            \\
+            \hline
+            SatAssistance, SatMachine     & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            SatCustomer, SatContact       & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            SatInterventionReport         & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            SatAttachment, SatServiceType & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            SatSpecialization             & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            SatEmployeeSpecialization     & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Kein Fix           \\
+            \hline
+            \multicolumn{4}{|l|}{\textit{Modul: shared}}                                                                         \\
+            \hline
+            Employee, User                & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            Document, CostCenter          & \textcolor{green!60!black}{Ja} & \textcolor{green!60!black}{Ja} & Fix A              \\
+            CostAllocation                & \textcolor{green!60!black}{Ja} & \textcolor{red}{Nein}          & Fix B              \\
+            Organization                  & \textcolor{red}{Nein}          & \textcolor{green!60!black}{Ja} & Kein Fix*          \\
+            Notification                  & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Kein Fix           \\
+            NotificationPreferences       & \textcolor{red}{Nein}          & \textcolor{red}{Nein}          & Kein Fix           \\
+            \hline
+        \end{tabular}
+    \end{center}
+    \caption{Modell-Klassifikation nach Feldern (Phase 1, Schritt 3). Fix A: beide Filter; Fix B: nur org\_id-Filter; * Organization ist Root-Entity ohne org\_id.}
+    \label{tab:model_matrix}
+\end{table}
+
+Aus der Tabelle ergeben sich folgende Schlussfolgerungen für die Implementierung:
+
+\begin{enumerate}
+    \item \textbf{Fix A (27 Modelle):} Beide Filter (\texttt{organization\_id} und
+          \texttt{deleted\_at}) müssen in \texttt{get()} und \texttt{get\_or\_404()} aktiv sein.
+          Dies betrifft den grössten Teil aller betroffenen Endpunkte.
+    \item \textbf{Fix B (5 Modelle):} Nur der \texttt{organization\_id}-Filter ist
+          anzuwenden. Da diese Modelle kein \texttt{deleted\_at}-Feld besitzen, entfällt
+          Issue \#14 für sie; IDOR (Issue \#5) ist jedoch dennoch präsent.
+    \item \textbf{Kein Fix notwendig (5 Klassen):} Join-Tabellen
+          (\texttt{VehicleGroupMember}, \texttt{TripPosition},
+          \texttt{SatEmployeeSpecialization}), benutzergebundene Tabellen
+          (\texttt{Notification}, \texttt{NotificationPreferences}) und die Root-Entity
+          \texttt{Organization} tragen keine \texttt{organization\_id} und sind
+          nicht über generic \texttt{get\_or\_404()} exponiert.
+\end{enumerate}
+
+Das \texttt{hasattr}-Guard-Muster aus \texttt{get\_multi()} und \texttt{count()}
+behandelt alle Fälle korrekt, weil es zur Laufzeit prüft, ob das jeweilige Modell das
+gesuchte Attribut überhaupt besitzt. Dasselbe Muster, ohne Sonderbehandlung einzelner
+Modelle, kann direkt in \texttt{get()} und \texttt{get\_or\_404()} übernommen werden.
+
+
+\subsubsection{Schritt 4: Analyse der bestehenden Tests}
+
+Die vollständige Test-Suite des Projekts liegt unter \texttt{backend/tests/} und ist
+in drei Schichten gegliedert:
+
+\begin{itemize}
+    \item \textbf{Unit-/API-Tests} (\texttt{tests/test\_*.py}): Prüfen einzelne Endpunkte
+          (z.\,B. \texttt{test\_auth.py}, \texttt{test\_vehicles.py}) gegen den
+          Anwendungs-TestClient mit echten Datenbank-Transaktionen.
+    \item \textbf{Integrationstests} (\texttt{tests/integration/}): Testen vollständige
+          Use-Cases über mehrere Endpunkte hinweg, z.\,B. Create-Read-Update-Delete-Zyklen.
+    \item \textbf{Smoke-Tests} (\texttt{tests/smoke/}): Status-Code-Checks gegen eine
+          Live-ähnliche DB; bekannte Bugs sind mit \texttt{@pytest.mark.xfail} markiert.
+\end{itemize}
+
+\paragraph{Test-Fixtures (conftest.py).}
+Alle Tests verwenden eine gemeinsame Fixture-Hierarchie:
+\texttt{db\_session} rollt jede Transaktion via Savepoint zurück;
+\texttt{test\_organization} legt eine einzige Testorganisation an;
+\texttt{test\_admin\_user} und \texttt{test\_fleet\_manager} sind User dieser Organisation.
+Die Header-Fixtures \texttt{admin\_headers} / \texttt{manager\_headers} erzeugen
+JWT-Bearer-Tokens via \texttt{create\_access\_token(subject, organization\_id, role)}.
+\emph{Ein zweites Mandanten-Objekt existiert in der Fixture-Suite nicht}; das ist
+der Ausgangspunkt für die PoC-Tests in Schritt 5.
+
+\paragraph{Befund in integration/test\_vehicle\_crud.py.}
+Die Datei enthält den Test \texttt{test\_delete\_then\_get\_still\_returns\_soft\_deleted},
+der nach einem Soft-Delete explizit \texttt{status\_code == 200} erwartet und mit dem
+Kommentar \emph{``GET by ID still returns 200 (soft-deleted records are not filtered
+    in get\_or\_404)''} versehen ist, ein Eingeständnis des bekannten Bugs.
+Dieser Test muss nach dem Patch auf \texttt{status\_code == 404} umgestellt werden.
+
+\paragraph{Befund in smoke/test\_tools.py.}
+\texttt{test\_delete\_tool\_nonexistent\_returns\_204} bestätigt ein weiteres Symptom:
+\texttt{DELETE} auf eine nicht existierende ID liefert \texttt{204} statt \texttt{404},
+weil \texttt{delete()} intern \texttt{get()} ohne Soft-Delete-Filter aufruft.
+
+\paragraph{Lücke: kein Cross-Tenant-Test.}
+Keiner der bestehenden Tests prüft, ob ein User die Ressourcen einer anderen
+Organisation lesen kann. Alle Fixtures operieren innerhalb derselben
+\texttt{test\_organization}. Diese Lücke wird in Schritt 5 durch dedizierte PoC-Tests
+geschlossen.
+
+\subsubsection{Schritt 5: Proof-of-Concept-Tests (vor dem Patch)}
+
+Um die Schwachstellen reproduzierbar zu beweisen, wurden vier automatisierte
+PoC-Tests in der Datei \texttt{tests/test\_idor\_poc.py} erstellt.
+Die Tests beschreiben das \emph{korrekte, sichere} Verhalten und
+\textbf{schlagen vor dem Patch fehl} (\texttt{FAILED}).
+Nach dem Patch laufen sie durch (\texttt{PASSED}).
+Dieses Red/Green-Muster ist der Standard im Security-Testing.
+
+\paragraph{Zusätzliche Fixtures.}
+Da alle bestehenden Fixtures nur eine einzige Organisation verwenden, wurden drei
+neue Fixtures hinzugefügt:
+\begin{itemize}
+    \item \texttt{second\_organization}: legt eine zweite Organisation
+          (\emph{Angreifer-Tenant}) direkt via SQLAlchemy an;
+    \item \texttt{attacker\_user}: Admin-User in der Angreifer-Organisation;
+    \item \texttt{attacker\_headers}: JWT-Bearer-Token für diesen User
+          (\texttt{organization\_id} zeigt auf den Angreifer-Tenant).
+\end{itemize}
+
+\paragraph{PoC 1: IDOR (Issue \#5).}
+\texttt{TestIDOR::test\_cross\_tenant\_vehicle\_read\_returns\_404}:
+\begin{enumerate}
+    \item Ein Fahrzeug wird der Opfer-Organisation zugeordnet (\texttt{victim\_vehicle}).
+    \item Der Angreifer-User ruft \texttt{GET /api/v1/vehicles/\{id\}} auf.
+    \item \textbf{Korrektes Verhalten (Test-Assertion):} \texttt{404 Not Found}.
+    \item \textbf{Aktuelles Verhalten:} \texttt{200 OK} (Test \texttt{FAILED},
+          Schwachstelle bewiesen).
+\end{enumerate}
+
+\texttt{TestIDOR::test\_cross\_tenant\_vehicle\_read\_does\_not\_expose\_foreign\_org\_id}
+prüft ebenfalls, dass der Endpunkt \texttt{404} zurückliefert und damit keine
+\texttt{organization\_id} des Opfer-Tenants preisgibt.
+
+\paragraph{PoC 2: Soft-Delete-Bypass (Issue \#14).}
+\texttt{TestSoftDeleteBypass::test\_soft\_deleted\_vehicle\_returns\_404}:
+\begin{enumerate}
+    \item Ein Fahrzeug wird via \texttt{DELETE /api/v1/vehicles/\{id\}} soft-deleted
+          (Rückgabecode: \texttt{204}).
+    \item \texttt{GET /api/v1/vehicles/\{id\}} durch den Admin-User.
+    \item \textbf{Korrektes Verhalten:} \texttt{404 Not Found}.
+    \item \textbf{Aktuelles Verhalten:} \texttt{200 OK} (Test \texttt{FAILED}).
+\end{enumerate}
+
+\texttt{TestSoftDeleteBypass::test\_soft\_deleted\_vehicle\_absent\_in\_list\_and\_by\_id}
+zeigt die Inkonsistenz: \texttt{GET /api/v1/vehicles} (Liste) liefert das
+soft-gelöschte Fahrzeug korrekt nicht zurück, \texttt{GET /api/v1/vehicles/\{id\}}
+hingegen schon; beide Assertions müssen \texttt{404} ergeben.
+
+\paragraph{Testergebnis vor dem Patch.}
+\begin{center}
+    \begin{tabular}{lll}
+        \hline
+        \textbf{Testname}                               & \textbf{Ergebnis (vor Patch)} & \textbf{Erwartet (nach Patch)} \\
+        \hline
+        \texttt{test\_cross\_tenant\_...\_returns\_404} & \texttt{FAILED}               & \texttt{PASSED}                \\
+        \texttt{test\_cross\_tenant\_...\_no\_expose}   & \texttt{FAILED}               & \texttt{PASSED}                \\
+        \texttt{test\_soft\_deleted\_...\_returns\_404} & \texttt{FAILED}               & \texttt{PASSED}                \\
+        \texttt{test\_soft\_deleted\_...\_absent\_...}  & \texttt{FAILED}               & \texttt{PASSED}                \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\noindent Alle vier Tests scheitern erwartungsgemäss vor dem Patch
+(\texttt{4 failed}) und beweisen damit die Schwachstellen reproduzierbar.

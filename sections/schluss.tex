@@ -1,0 +1,47 @@
+\section{Schlussbemerkungen}
+\label{sec:schluss}
+
+Eine fehlende Zeile in einer Basisklasse, auf den ersten Blick ein
+Entwicklungsfehler wie viele andere. Tatsächlich war die fehlende
+Mandantenfilterung in \texttt{BaseService.get()} kein isoliertes Problem an
+einem einzelnen Endpunkt, sondern ein systemischer Konstruktionsfehler, der
+sich auf nahezu alle CRUD-Endpunkte mit organisationsgebundenen Ressourcen
+auswirkte. Und weil in derselben Methode auch der \texttt{deleted\_at}-Filter
+fehlte, liessen sich soft-gelöschte Datensätze per direkter UUID-Abfrage
+weiterhin lesen. Ein Soft-Delete-Bypass, der ohne diese Analyse vermutlich
+unentdeckt geblieben wäre.
+
+Die Behebung erfolgte bewusst an der gemeinsamen Wurzel des Problems. Statt
+einzelne Endpunkte punktuell nachzubessern, wurde die Basisklasse um einen
+optionalen \texttt{organization\_id}-Parameter sowie einen konsistenten
+Soft-Delete-Filter erweitert und anschliessend an allen relevanten Aufrufern
+korrekt verdrahtet. Dieses Vorgehen reduzierte den Änderungsaufwand pro
+Endpunkt, verbesserte die Konsistenz der Sicherheitslogik und senkte das Risiko,
+dass künftig neue Router erneut ohne Mandantenscoping implementiert werden.
+
+Das Testergebnis spricht für sich: Die zuvor als
+Proof-of-Concept formulierten Angriffe schlagen nach der Anpassung fehl, die neu
+hinzugefügten Regressionstests decken beide Schwachstellenklassen gezielt ab,
+und die bestehende Testsuite läuft nach Anpassung der betroffenen Alt-Tests
+wieder vollständig durch. Der finale Stand mit \texttt{187 passed, 2 xfailed}
+zeigt, dass der Sicherheitsfix nicht nur lokal funktioniert, sondern auch mit
+dem restlichen Backend vereinbar ist.
+
+Multi-Tenant-Isolation ist kein Komfortmerkmal, sie ist eine
+Systemeigenschaft. Sobald Ressourcen per UUID
+adressierbar sind, muss die Autorisierung bei jedem Zugriff explizit an den
+aktuellen Mandanten gebunden werden. Wird diese Prüfung an einer zentralen
+Abstraktion vergessen, skaliert die Schwachstelle mit der Wiederverwendung genau
+so stark wie der Architekturvorteil selbst.
+
+Ein verbleibender Prüfpunkt ausserhalb des bearbeiteten Scopes betrifft Modelle,
+die nicht über \texttt{organization\_id}, sondern über benutzerspezifische
+Beziehungen geschützt werden, insbesondere Benachrichtigungen. Dort liegt keine
+identische Schwachstelle vor, die Analyse zeigt jedoch, dass derselbe Grundsatz
+auch für andere Besitzermodelle konsequent weitergeführt werden sollte.
+
+Der Patch erfüllt die Anforderungen an eine nicht-triviale,
+sicherheitsrelevante Open-Source-Kontribution: Die Schwachstelle wurde technisch
+analysiert, reproduzierbar nachgewiesen, an der Wurzel behoben und mit einer
+umfassenden Testsuite abgesichert, eine Grundlage, die auch einem echten
+Code-Review standzuhalten verspricht.

@@ -1,0 +1,38 @@
+\section*{Abstract}
+
+Diese Arbeit dokumentiert die Analyse und Behebung einer
+Sicherheitslücke im Open-Source-Projekt \emph{dnchub-app} (FleetOptima),
+einem mandantenfähigen Flottenmanagement System. Die Schwachstelle, klassifiziert als \emph{Insecure Direct Object Reference}
+mit einem CVSS-Score von 9.3, betrifft die zentrale
+Datenbankzugriffsklasse \texttt{BaseService} im Python/FastAPI-Backend.
+Mangels \texttt{organization\_id}-Filterung in \texttt{get\_or\_404()} kann
+jeder authentifizierte Benutzer Ressourcen beliebiger anderer Mandanten lesen,
+modifizieren oder löschen, allein per bekannter UUID (GitHub Issue \#5).
+Zusätzlich erlaubt das Fehlen eines \texttt{deleted\_at}-Filters den Zugriff
+auf soft-gelöschte Datensätze per direkter ID-Abfrage (GitHub Issue \#14).
+
+Der Patch greift direkt an der Wurzel an. Die Basisklasse erhält zwei neue
+Parameter; ein einziger Commit schützt damit über 90 API-Endpunkte auf einmal.
+Für beide Angriffsklassen entstehen automatisierte Sicherheitstests, die
+den Angriff auf dem Originalcode reproduzieren und nach dem Patch als
+Regressionstests weiterbestehen.
+
+\vspace{2ex}
+
+\textbf{Keywords:}
+
+IDOR, CWE-639, Multi-Tenant Authorization, Soft-Delete Bypass, FastAPI,
+SQLAlchemy, Security Patch
+
+\clearpage
+
+\section*{Vorwort}
+
+Dieses Dokument entstand im Modul \emph{Cyber Sich (Cysl)} an der FHNW
+Hochschule für Technik im Frühjahrssemester 2026. Aufgabe war es, für ein
+reales Open-Source-Projekt auf GitHub einen nicht-trivialen Sicherheitspatch
+einzureichen. Die Wahl fiel auf \emph{dnchub-app}: Das Projekt hatte offene,
+konkret beschriebene Security-Issues, eine realistische Codebase und einen
+aktiven Repository-Owner, der per Code-Review Feedback gab. Das Projekt wurde
+geforkt. Alle Änderungen liegen auf einem dedizierten Feature-Branch.
+

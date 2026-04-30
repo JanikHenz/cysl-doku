@@ -1,0 +1,315 @@
+\section{Testing und Qualitätssicherung}
+\label{sec:testing}
+
+\subsection{Teststrategie}
+\label{sec:teststrategie}
+
+Für jede Schwachstelle galt dieselbe Arbeitsregel: erst beweisen, dass der
+Fehler wirklich existiert. Dann erst beheben. Das klingt offensichtlich, ist in
+der Praxis aber entscheidend: Ein Test, der vor dem Patch scheitert und danach
+besteht, ist der einzige belastbare Nachweis, dass die Lücke geschlossen ist.
+Das Vorgehen gliedert sich in fünf Schritte:
+
+\begin{enumerate}
+      \item \textbf{Einlesen und verstehen.}
+            Das gemeldete Issue lesen, den betroffenen Code durchgehen --
+            \texttt{base.py}, Modell-Definitionen, Router, bis der
+            Angriffspfad klar ist.
+      \item \textbf{Fehler reproduzieren.}
+            Einen minimalen HTTP-Request zusammenstellen, der die Schwachstelle
+            auslöst (etwa GET auf eine fremde Ressource mit eigenem Token).
+            Vor dem Patch antwortet der Server mit 200, obwohl er 404
+            zurückgeben müsste.
+      \item \textbf{Failing Test schreiben.}
+            Den reproduzierten Angriff als automatisierten Test kodieren.
+            Auf dem ungepatchten Stand muss der Test scheitern (\emph{Red}).
+      \item \textbf{Patch implementieren.}
+            Die kleinste Code-\u00c4nderung vornehmen, die den Test bestehen lässt.
+      \item \textbf{Tests ausführen.}
+            Alle neuen \emph{und} bestehenden Tests laufen lassen. Neue Tests
+            grün; kein bestehender darf neu scheitern (\emph{Green}).
+\end{enumerate}
+
+\noindent Tests werden in drei Kategorien geführt:
+
+\begin{itemize}
+      \item \textbf{Sicherheitstests} (\texttt{tests/test\_idor.py}): Eine einzelne
+            Datei, die Proof-of-Concept und Regressionstests vereint.
+            Deckt beide Angriffsklassen über alle relevanten HTTP-Verben ab
+            (GET, PATCH, DELETE, LIST).
+      \item \textbf{Bestehende Suite} (Smoke- und Integrationstests):
+            Stellen sicher, dass der Patch keine reguläre Funktionalität bricht.
+\end{itemize}
+
+\subsection{Neue Sicherheitstests}
+\label{sec:neue-sicherheitstests}
+
+Alle Sicherheitstests befinden sich in \texttt{tests/test\_idor.py}.
+Jeder Test registriert zwei Mandanten über die öffentliche
+\texttt{/auth/register}-API und erstellt Ressourcen via \texttt{POST /vehicles}
+bzw. \texttt{POST /employees}, ohne direkt auf die Datenbank zuzugreifen.
+Die Datei deckt zwei Angriffsklassen über mehrere HTTP-Verben ab:
+
+\paragraph{Klasse 1: IDOR (Issue \#5).}
+Zwei Organisationen (Org A = Opfer, Org B = Angreifer) werden angelegt.
+Org B versucht, Ressourcen von Org A zu lesen, zu ändern und zu löschen:
+
+\begin{center}
+      \begin{tabular}{|l|l|}
+            \hline
+            \textbf{Testfall}                 & \textbf{Erwartetes Ergebnis}            \\
+            \hline
+            \texttt{test\_get\_blocked}       & GET fremdes Objekt → 404                \\
+            \texttt{test\_patch\_blocked}     & PATCH fremdes Objekt → 404              \\
+            \texttt{test\_delete\_no\_effect} & DELETE: Objekt bei Org A unverändert    \\
+            \texttt{test\_list\_isolated}     & LIST enthält keine Fremd-Daten          \\
+            \texttt{test\_no\_org\_leak}      & Antwortbody enthält keine fremde Org-ID \\
+            \hline
+      \end{tabular}
+\end{center}
+
+\vspace{0.5em}
+\noindent HTTP-DELETE ist per Standard idempotent; der Statuscode ist 204,
+unabhängig davon, ob ein Objekt gefunden wurde. Der bestehende Smoke-Test \texttt{test\_delete\_vehicle\_nonexistent\_returns\_204}
+bestätigt diese Eigenschaft. Das sicherheitskritische Merkmal ist daher nicht
+der Statuscode, sondern dass Org A das Objekt anschliessend noch lesen kann.
+
+\paragraph{Klasse 2: Soft-Delete-Bypass (Issue \#14).}
+Eine Ressource wird soft-gelöscht. Alle nachfolgenden Zugriffe auf sie müssen
+\texttt{404} zurückgeben:
+
+\begin{center}
+      \begin{tabular}{|l|l|}
+            \hline
+            \textbf{Testfall}             & \textbf{Erwartetes Ergebnis}     \\
+            \hline
+            \texttt{test\_get\_gone}      & GET soft-deleted → 404           \\
+            \texttt{test\_patch\_gone}    & PATCH soft-deleted → 404         \\
+            \texttt{test\_list\_hidden}   & LIST filtert soft-deleted heraus \\
+            \texttt{test\_double\_delete} & Zweites DELETE → 204, GET → 404  \\
+            \hline
+      \end{tabular}
+\end{center}
+
+\paragraph{Klasse 3: Modulübergreifende Verifizierung (\texttt{TestIDOREmployee}).}
+Der \texttt{BaseService}-Patch gilt für alle erbenden Services.
+Um dies empirisch zu belegen, wiederholt \texttt{TestIDOREmployee} dieselben
+Angriffsszenarien mit \emph{Mitarbeitenden} als Zielressource:
+
+\begin{center}
+      \begin{tabular}{|l|l|}
+            \hline
+            \textbf{Testfall}                 & \textbf{Erwartetes Ergebnis}           \\
+            \hline
+            \texttt{test\_get\_blocked}       & GET fremdes Objekt → 404               \\
+            \texttt{test\_patch\_blocked}     & PATCH fremdes Objekt → 404             \\
+            \texttt{test\_list\_isolated}     & LIST enthält keine Fremd-Einträge      \\
+            \texttt{test\_soft\_delete\_gone} & GET/LIST nach DELETE → 404 bzw. absent \\
+            \hline
+      \end{tabular}
+\end{center}
+
+\subsection{Ergänzende Schwachstellenanalyse (Phase 2 \& 3)}
+\label{sec:zusatz-schwachstellen}
+
+\subsubsection{Warum erst nach Phase 1?}
+
+Der initiale Patch in \texttt{base.py} behebt IDOR und Soft-Delete-Bypass
+vollständig, aber \emph{nur für Code, der durch \texttt{BaseService} läuft}.
+Sobald die Phase-1-Tests grün waren, stellte sich die Folgefrage:
+
+\begin{quote}
+      \emph{Gibt es Endpunkte, die \texttt{BaseService} umgehen und daher vom zentralen
+            Patch unberührt bleiben?}
+\end{quote}
+
+Die Antwort erforderte eine gezielte Durchsicht aller Router-Dateien, ein Schritt,
+der sinnvollerweise erst \emph{nach} dem Basis-Fix stattfindet,
+weil vorher der Patch-Scope noch nicht stabil war.
+
+\subsubsection{Systematische Vorgehensweise}
+
+Für jede Router-Datei wurde die folgende Checkliste angewendet:
+
+\begin{enumerate}
+      \item Welche Service-Methode ruft der Endpunkt auf?
+      \item Führt diese Methode zu \texttt{BaseService.get()} oder
+            \texttt{get\_multi()}?
+            Falls \textbf{nein}: Enthält die Methode einen eigenen
+            \texttt{organization\_id}-Filter?
+      \item Wird nach einem \texttt{get\_or\_404}-Lookup die
+            \texttt{user\_id} oder \texttt{organization\_id} des Ergebnisses
+            gegen den eingeloggten Benutzer geprüft?
+\end{enumerate}
+
+\noindent Diese Checkliste wurde in zwei Durchgängen angewendet:
+\textbf{Phase 2} nach dem Basis-Patch (Dokumente, SAT, Notifications),
+\textbf{Phase 3} nach der vollständigen Erweiterung auf alle verbleibenden Module.
+
+\subsubsection{Phase-2-Findings (3 Lückenklassen)}
+
+\begin{enumerate}
+      \item \textbf{Notifications: fehlende Eigentümerprüfung (GET / DELETE / mark-as-read).}\\
+            \texttt{get\_or\_404()} liefert die Notification zurück, aber ein
+            Vergleich \texttt{notification.user\_id == current\_user.id} fehlte
+            in \emph{allen drei} Endpunkten.\\
+            Auswirkung: Jeder authentifizierte Benutzer kann fremde Notifications
+            lesen, als gelesen markieren und löschen.\\
+            \emph{Fix:} Ownership-Check \texttt{notification.user\_id != current\_user.id}
+            → HTTP 404 in GET, POST /read und DELETE.
+
+      \item \textbf{SAT-Assistances: fehlender Mandanten-Filter (GET).}\\
+            \texttt{AssistanceService.get\_detail()} baut eigene SQLAlchemy-Filter
+            und erbt nicht von \texttt{BaseService.get()}.
+            Der \texttt{organization\_id}-Filter fehlte völlig.\\
+            \emph{Fix:} Parameter \texttt{organization\_id} in
+            \texttt{get\_detail()} aufgenommen; Router reicht
+            \texttt{current\_user.organization\_id} weiter.
+
+      \item \textbf{List-Endpunkte (Dokumente, Treibstoff, Verbrauchsmaterial):
+                  fehlender Mandanten-Filter (LIST).}\\
+            Fünf FK-List-Methoden filterten ausschliesslich nach der
+            Fremdschlüssel-ID ohne \texttt{organization\_id}.\\
+            \emph{Fix:} Optionaler Parameter \texttt{organization\_id} ergänzt;
+            alle fünf Router-Aufrufe befüllen ihn.
+\end{enumerate}
+
+\subsubsection{Phase-3-Findings (3 HIGH + 14 MEDIUM)}
+
+Der zweite Durchgang durch alle verbleibenden Modulordner
+(\texttt{fleet/}, \texttt{tools/}, \texttt{sat/}, \texttt{shared/})
+fand drei Klassen weiterer Schwachstellen:
+
+\paragraph{HIGH: Direkte Cross-Tenant-Zugriffe.}
+\begin{enumerate}
+      \item \textbf{\texttt{shared/api/users.py}: GET / PATCH / DELETE
+            \texttt{/{user\_id}}} (Admin-Endpunkte).\\
+            \texttt{get\_or\_404} und \texttt{delete()} wurden ohne
+            \texttt{organization\_id} aufgerufen.
+            Ein Admin aus Org A konnte Benutzer anderer Mandanten lesen,
+            ändern und löschen.\\
+            \emph{Fix:} \texttt{organization\_id=current\_user.organization\_id}
+            an alle drei Aufrufe übergeben.
+
+      \item \textbf{\texttt{sat/api/attachments.py}: DELETE \texttt{/{attachment\_id}}}.\\
+            \texttt{SatAttachmentService} erbt von \texttt{BaseService} und
+            unterstützt \texttt{organization\_id} in \texttt{delete()},
+            der Router übergab es jedoch nicht.
+            Jeder SAT-Manager konnte fremde Anhänge löschen.\\
+            \emph{Fix:} \texttt{organization\_id=current\_user.organization\_id}
+            hinzugefügt.
+
+      \item \textbf{\texttt{fleet/api/gps.py}: POST \texttt{/trips/\{trip\_id\}/position}}.\\
+            GPS-Koordinaten konnten einem beliebigen Trip hinzugefügt werden,
+            ohne zu prüfen, ob der Trip dem eigenen Mandanten gehört.
+            Ein Angreifer konnte fremde Trips mit falschen Positionsdaten
+            beschreiben.\\
+            \emph{Fix:} \texttt{trip\_service.get\_or\_404(db, trip\_id,
+                  organization\_id=current\_user.organization\_id)} vor dem Schreiben
+            der Position eingefügt.
+\end{enumerate}
+
+\paragraph{MEDIUM: Enumeration via FK-Guessing (List-Methoden).}
+14 Service-Methoden in sechs Dateien filterten FK-List-Abfragen ohne
+\texttt{organization\_id}: GPS-Trips (by vehicle/employee, active trip, Routenpunkte,
+letzte Position), Wartungsaufgaben/-zeitpläne, Treibstoffpumpen-Lieferungen,
+Werkzeuge und Werkzeugzuweisungen (by employee/vehicle), SAT-Kontakte,
+SAT-Maschinen und SAT-Interventionsberichte.\\
+\emph{Fix (einheitliches Muster):} Pflichtparameter \texttt{organization\_id: str} (kein Defaultwert)
+in jede Methode aufgenommen; damit wird ein \texttt{WHERE organization\_id = \$1}
+unbedingt an die Abfrage gehängt.
+Python erzwingt, dass jeder Aufrufer den Parameter explizit übergibt.
+Ein versehentliches Weglassen des Mandanten-Filters führt zu einem \texttt{TypeError}
+zur Laufzeit, nicht zu einem stillen Sicherheitsleck.
+Alle zugehörigen Router befüllen den Parameter mit \texttt{current\_user.organization\_id}.
+
+\subsubsection{Testnachweis (Regression)}
+
+Da alle Phase-2- und Phase-3-Lücken durch Code-Review gefunden wurden
+(kein vorheriger Testfehler), folgt der Nachweis dem gleichen
+Red/Green-Prinzip wie Phase 1:
+\texttt{TestIDOREmployee} wiederholt alle Angriffsszenarien mit
+\emph{Mitarbeitenden} als Ressource und beweist, dass der
+\texttt{BaseService}-Patch sowie die individuellen Fixes gemeinsam
+wirksam sind.
+Die vollständige Smoke-Test-Suite (187 Tests) wurde nach jedem
+Patch-Durchgang grün ausgeführt.
+
+\subsection{Testabdeckung des zentralen Patches}
+\label{sec:patch-abdeckung}
+
+Der Patch befindet sich ausschliesslich in \texttt{app/shared/services/base.py},
+der gemeinsamen Basisklasse aller Module (Fahrzeuge, Mitarbeitende, Werkzeuge,
+Treibstoff, SAT u.a.). Alle Service-Klassen erben von \texttt{BaseService} und
+nutzen dieselben Methoden \texttt{get()}, \texttt{get\_or\_404()},
+\texttt{get\_multi()} und \texttt{delete()} ohne eigene Überschreibungen der
+Sicherheitslogik.
+
+Daraus folgt: ein Modultest genügt, um den Patch in der Basisklasse
+nachzuweisen. Die Regressionstests verwenden \emph{Fahrzeuge} als
+repräsentative Ressource und prüfen alle vier betroffenen Methoden:
+
+\begin{center}
+      \begin{tabular}{|l|l|l|}
+            \hline
+            \textbf{Methode in base.py} & \textbf{Fix}                            & \textbf{Geprüft durch}                              \\
+            \hline
+            \texttt{get()}              & org\_id-Filter + soft-delete-Ausschluss & GET- und soft-delete-Tests                          \\
+            \texttt{get\_or\_404()}     & Delegation an \texttt{get()}            & PATCH- und GET-Tests                                \\
+            \texttt{get\_multi()}       & org\_id-Filter + soft-delete-Ausschluss & LIST-Tests (IDOR und soft-delete)                   \\
+            \texttt{delete()}           & ruft \texttt{get()} mit org\_id auf     & Cross-Tenant-DELETE (Seiteneffekt: Objekt erhalten) \\
+            \hline
+      \end{tabular}
+\end{center}
+
+\noindent Module wie \texttt{FuelService}, die eine eigene \texttt{delete()}-Methode
+besitzen (und daher separat gepatcht wurden), sind durch den bestehenden
+Smoke-Test \texttt{test\_delete\_fuel\_entry\_nonexistent\_returns\_204}
+abgedeckt. Dieser Test schlug vor dem Patch mit HTTP 500 fehl und besteht
+nach dem Patch.
+
+\subsection{Anpassung bestehender Tests}
+\label{sec:anpassung-tests}
+
+Nach dem Patch scheiterten zwei bestehende Tests. Beide dokumentierten
+zuvor das \emph{fehlerhafte} Verhalten:
+
+\begin{enumerate}
+      \item \textbf{\texttt{test\_delete\_then\_get\_still\_returns\_soft\_deleted}}\\
+            Datei: \texttt{tests/integration/test\_vehicle\_crud.py}\\
+            Alter Kommentar: \emph{``soft-deleted records are still returned by GET''}\\
+            Alte Assertion: \texttt{assert get\_res.status\_code == 200}\\
+            Neue Assertion: \texttt{assert get\_res.status\_code == 404}\\
+            Der Testname bleibt unverändert als historisches Artefakt, der Kommentar
+            wurde korrigiert.
+
+      \item \textbf{\texttt{test\_delete\_fuel\_entry\_nonexistent\_returns\_204}}\\
+            Datei: \texttt{tests/smoke/test\_fuel.py}\\
+            \texttt{FuelService} besitzt eine eigene \texttt{delete()}-Methode,
+            die \texttt{organization\_id} nicht als Parameter kannte.
+            Der API-Endpunkt übergab den Parameter, der Override ignorierte ihn; Python warf einen \texttt{TypeError}, der zum HTTP-500 wurde.\\
+            Fix: Signatur um \texttt{*, organization\_id: str} ergänzt
+            und an den internen \texttt{self.get()}-Aufruf weitergeleitet.
+\end{enumerate}
+
+\subsection{Ausführung der Integrationstests}
+\label{sec:testausfuehrung}
+
+Das finale Ergebnis nach allen Korrekturen:
+
+\begin{lstlisting}[style=custompython, caption={Finales Testergebnis -- 187 passed, 0 failed}]
+$ pytest tests/ -q
+.......................................................................
+...................................x...x................................
+.............................................
+187 passed, 2 xfailed, 14 warnings in 36.38s
+\end{lstlisting}
+
+\begin{itemize}
+      \item \textbf{187 passed}: alle Smoke-, Integrations-, PoC- und Regressionstests
+      \item \textbf{2 xfailed}: bekannte Admin-Only-Endpunkte
+            (\texttt{test\_list\_organizations\_as\_admin},
+            \texttt{test\_create\_organization}), die in der Testumgebung
+            ohne Super-Admin-Rechte bewusst nicht verfügbar sind
+      \item \textbf{0 failed}: kein Test schlägt fehl
+\end{itemize}
