@@ -71,9 +71,7 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_vehicles.png}
-        \caption{Fahrzeugliste des Opfers. Die URL zeigt die UUID des
-            neu erstellten Fahrzeugs, die der Angreifer im nächsten Schritt
-            benötigt.}
+        \caption{Fahrzeugliste des Opfers.}
         \label{fig:ui-opfer-vehicles}
     \end{figure}
 
@@ -93,17 +91,14 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_dashboard.png}
-        \caption{Leeres Dashboard des Angreifer-Mandanten unmittelbar nach
-            der Registrierung.}
+        \caption{Leeres Dashboard des Angreifer-Mandanten}
         \label{fig:ui-angreifer-dashboard}
     \end{figure}
 
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_vehicles.png}
-        \caption{Fahrzeugliste des Angreifers \textendash{} ebenfalls leer.
-            Die Oberfläche bestätigt also korrekt, dass der Angreifer auf
-            dem Listenweg keine fremden Daten sehen kann.}
+        \caption{Fahrzeugliste des Angreifers \textendash{} ebenfalls leer.}
         \label{fig:ui-angreifer-vehicles}
     \end{figure}
 
@@ -120,9 +115,7 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_opfer_vehicle.png}
-        \caption{IDOR via Browser \textendash{} der Angreifer sieht das
-            Fahrzeug (\texttt{OPFER-001}) des fremden Mandanten, obwohl
-            sein eigener Tenant keine Fahrzeuge besitzt.}
+        \caption{Angreifer sieht das Fahrzeug (\texttt{OPFER-001}) des fremden Mandanten.}
         \label{fig:ui-angreifer-opfer-vehicle}
     \end{figure}
 
@@ -139,9 +132,7 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_softdelete.png}
-        \caption{Der soft-gelöschte Datensatz bleibt vor dem Patch
-            über die direkte URL weiterhin erreichbar \textendash{} sowohl
-            für das Opfer selbst als auch für den Angreifer.}
+        \caption{Der soft-gelöschte Datensatz bleibt erreichbar.}
         \label{fig:ui-softdelete}
     \end{figure}
 
@@ -159,9 +150,7 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/opfer_registrieren.png}
-        \caption{Registrierung des Opfers per \texttt{POST /api/v1/auth/register}. Die
-            API liefert einen JWT zurück, den das Opfer für alle weiteren
-            Requests verwendet.}
+        \caption{Registrierung des Opfers per \texttt{POST /api/v1/auth/register}.}
         \label{fig:curl-opfer-register}
     \end{figure}
 
@@ -176,8 +165,7 @@
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/opfer_create_vehicle.png}
         \caption{Erzeugung eines Fahrzeugs im Kontext des Opfers per
-            \texttt{POST /api/v1/vehicles}. Das Feld \texttt{id} wird als
-            \texttt{VID} für die späteren Angriffsaufrufe gespeichert.}
+            \texttt{POST /api/v1/vehicles}.}
         \label{fig:curl-opfer-create-vehicle}
     \end{figure}
 
@@ -191,9 +179,7 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/angreifer_registrieren.png}
-        \caption{Registrierung des Angreifers mit eigener Organisation.
-            Der zurückgegebene JWT enthält eine andere
-            \texttt{org\_id} als der des Opfers.}
+        \caption{Registrierung des Angreifers mit eigener Organisation.}
         \label{fig:curl-angreifer-register}
     \end{figure}
 
@@ -207,9 +193,7 @@
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/use_vehicle_id.png}
-        \caption{IDOR per API \textendash{} der Angreifer verwendet die
-            gestohlene UUID und erhält trotz fremdem JWT den vollen
-            Datensatz zurück.}
+        \caption{IDOR per API \textendash{} der Angreifer verwendet die gestohlene UUID.}
         \label{fig:curl-use-vehicle-id}
     \end{figure}
 
@@ -223,8 +207,7 @@
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/angreifer_delete_vehicle.png}
         \caption{Unautorisierter \texttt{DELETE}-Aufruf des Angreifers
-            gegen das Fahrzeug des Opfers. HTTP-Status \texttt{204}
-            signalisiert den Erfolg.}
+            gegen das Fahrzeug des Opfers.}
         \label{fig:curl-delete-vehicle}
     \end{figure}
 
@@ -239,9 +222,7 @@
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/vehicle_after_delete.png}
         \caption{Das soft-gelöschte Fahrzeug bleibt vor dem Patch per
-            direkter ID-Abfrage sichtbar. Das Feld \texttt{deleted\_at}
-            ist zwar gesetzt, die Ressource wird aber trotzdem
-            ausgeliefert.}
+            direkter ID-Abfrage sichtbar.}
         \label{fig:curl-vehicle-after-delete}
     \end{figure}
 

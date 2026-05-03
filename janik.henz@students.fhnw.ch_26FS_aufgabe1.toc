@@ -51,11 +51,11 @@
 \contentsline {subsubsection}{\numberline {A.1.5}Soft-Delete-Bypass in der UI}{26}{subsubsection.A.1.5}%
 \contentsline {subsection}{\numberline {A.2}API-Reproduktion mit curl}{27}{subsection.A.2}%
 \contentsline {subsubsection}{\numberline {A.2.1}Opfer registrieren}{27}{subsubsection.A.2.1}%
-\contentsline {subsubsection}{\numberline {A.2.2}Fahrzeug im Kontext des Opfers anlegen}{28}{subsubsection.A.2.2}%
+\contentsline {subsubsection}{\numberline {A.2.2}Fahrzeug im Kontext des Opfers anlegen}{27}{subsubsection.A.2.2}%
 \contentsline {subsubsection}{\numberline {A.2.3}Angreifer registrieren}{28}{subsubsection.A.2.3}%
-\contentsline {subsubsection}{\numberline {A.2.4}Cross-Tenant-GET (IDOR, Issue \#5)}{29}{subsubsection.A.2.4}%
+\contentsline {subsubsection}{\numberline {A.2.4}Cross-Tenant-GET (IDOR, Issue \#5)}{28}{subsubsection.A.2.4}%
 \contentsline {subsubsection}{\numberline {A.2.5}Cross-Tenant-DELETE}{29}{subsubsection.A.2.5}%
-\contentsline {subsubsection}{\numberline {A.2.6}Soft-Delete-Bypass (Issue \#14)}{30}{subsubsection.A.2.6}%
+\contentsline {subsubsection}{\numberline {A.2.6}Soft-Delete-Bypass (Issue \#14)}{29}{subsubsection.A.2.6}%
 \contentsline {subsection}{\numberline {A.3}Vollständiger Terminal-Log}{30}{subsection.A.3}%
 \contentsline {subsection}{\numberline {A.4}Ergänzende Kontrollabfragen}{32}{subsection.A.4}%
 \contentsline {subsection}{\numberline {A.5}Verhalten nach dem Patch}{33}{subsection.A.5}%

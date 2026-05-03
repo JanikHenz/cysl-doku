@@ -5,5 +5,5 @@
 \contentsline {table}{\numberline {3.1}{\ignorespaces Sicherheitsaudit der Methoden in \texttt {BaseService}\relax }}{3}{table.caption.7}%
 \contentsline {table}{\numberline {3.2}{\ignorespaces Verteilung der \texttt {get\_or\_404()}-Aufrufstellen nach Modul.\relax }}{5}{table.caption.8}%
 \contentsline {table}{\numberline {3.3}{\ignorespaces Modell-Klassifikation nach Feldern.\relax }}{7}{table.caption.9}%
-\contentsline {table}{\numberline {4.1}{\ignorespaces Zuordnung jedes Befunds zu seinem Patch-Abschnitt und der zugehörigen Testabdeckung.\relax }}{15}{table.caption.10}%
+\contentsline {table}{\numberline {4.1}{\ignorespaces Zuordnung jedes Befunds zu seinem Patch-Abschnitt und der Testabdeckung.\relax }}{15}{table.caption.10}%
 \babel@toc {ngerman}{}\relax 

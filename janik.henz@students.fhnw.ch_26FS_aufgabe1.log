@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2026.4.13)  3 MAY 2026 21:53
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2026.4.13)  3 MAY 2026 22:09
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1488,12 +1488,12 @@ Underfull \hbox (badness 2970) in paragraph at lines 119--119
 \openout2 = `sections/appendix.aux'.
 
  (./sections/appendix.tex
-<graphics/ui_attack/initialseite.png, id=720, 2569.6pt x 1300.86pt>
+<graphics/ui_attack/initialseite.png, id=709, 2569.6pt x 1300.86pt>
 File: graphics/ui_attack/initialseite.png Graphic file (type png)
 <use graphics/ui_attack/initialseite.png>
 Package pdftex.def Info: graphics/ui_attack/initialseite.png  used on input line 40.
 (pdftex.def)             Requested size: 409.71689pt x 207.40742pt.
-<graphics/ui_attack/opfer_registrieren.png, id=722, 2569.6pt x 1301.86375pt>
+<graphics/ui_attack/opfer_registrieren.png, id=711, 2569.6pt x 1301.86375pt>
 File: graphics/ui_attack/opfer_registrieren.png Graphic file (type png)
 <use graphics/ui_attack/opfer_registrieren.png>
 Package pdftex.def Info: graphics/ui_attack/opfer_registrieren.png  used on input line 52.
@@ -1503,81 +1503,81 @@ Package pdftex.def Info: graphics/ui_attack/opfer_registrieren.png  used on inpu
 
 
  <./graphics/ui_attack/initialseite.png>]
-<graphics/ui_attack/opfer_dashboard.png, id=728, 2569.6pt x 1301.86375pt>
+<graphics/ui_attack/opfer_dashboard.png, id=717, 2569.6pt x 1301.86375pt>
 File: graphics/ui_attack/opfer_dashboard.png Graphic file (type png)
 <use graphics/ui_attack/opfer_dashboard.png>
 Package pdftex.def Info: graphics/ui_attack/opfer_dashboard.png  used on input line 59.
 (pdftex.def)             Requested size: 409.71689pt x 207.56746pt.
-<graphics/ui_attack/opfer_create_vehicle.png, id=729, 2569.6pt x 1300.86pt>
+<graphics/ui_attack/opfer_create_vehicle.png, id=718, 2569.6pt x 1300.86pt>
 File: graphics/ui_attack/opfer_create_vehicle.png Graphic file (type png)
 <use graphics/ui_attack/opfer_create_vehicle.png>
 Package pdftex.def Info: graphics/ui_attack/opfer_create_vehicle.png  used on input line 66.
 (pdftex.def)             Requested size: 409.71689pt x 207.40742pt.
  [23 <./graphics/ui_attack/opfer_registrieren.png> <./graphics/ui_attack/opfer_dashboard.png>]
-<graphics/ui_attack/opfer_vehicles.png, id=736, 2569.6pt x 1302.8675pt>
+<graphics/ui_attack/opfer_vehicles.png, id=725, 2569.6pt x 1302.8675pt>
 File: graphics/ui_attack/opfer_vehicles.png Graphic file (type png)
 <use graphics/ui_attack/opfer_vehicles.png>
 Package pdftex.def Info: graphics/ui_attack/opfer_vehicles.png  used on input line 73.
 (pdftex.def)             Requested size: 409.71689pt x 207.7275pt.
-<graphics/ui_attack/angreifer_registrieren.png, id=737, 2569.6pt x 1302.8675pt>
+<graphics/ui_attack/angreifer_registrieren.png, id=726, 2569.6pt x 1302.8675pt>
 File: graphics/ui_attack/angreifer_registrieren.png Graphic file (type png)
 <use graphics/ui_attack/angreifer_registrieren.png>
-Package pdftex.def Info: graphics/ui_attack/angreifer_registrieren.png  used on input line 88.
+Package pdftex.def Info: graphics/ui_attack/angreifer_registrieren.png  used on input line 86.
 (pdftex.def)             Requested size: 409.71689pt x 207.7275pt.
  [24 <./graphics/ui_attack/opfer_create_vehicle.png> <./graphics/ui_attack/opfer_vehicles.png>]
-<graphics/ui_attack/angreifer_dashboard.png, id=744, 2569.6pt x 1300.86pt>
+<graphics/ui_attack/angreifer_dashboard.png, id=733, 2569.6pt x 1300.86pt>
 File: graphics/ui_attack/angreifer_dashboard.png Graphic file (type png)
 <use graphics/ui_attack/angreifer_dashboard.png>
-Package pdftex.def Info: graphics/ui_attack/angreifer_dashboard.png  used on input line 95.
+Package pdftex.def Info: graphics/ui_attack/angreifer_dashboard.png  used on input line 93.
 (pdftex.def)             Requested size: 409.71689pt x 207.40742pt.
-<graphics/ui_attack/angreifer_vehicles.png, id=745, 2569.6pt x 1297.84875pt>
+<graphics/ui_attack/angreifer_vehicles.png, id=734, 2569.6pt x 1297.84875pt>
 File: graphics/ui_attack/angreifer_vehicles.png Graphic file (type png)
 <use graphics/ui_attack/angreifer_vehicles.png>
-Package pdftex.def Info: graphics/ui_attack/angreifer_vehicles.png  used on input line 103.
+Package pdftex.def Info: graphics/ui_attack/angreifer_vehicles.png  used on input line 100.
 (pdftex.def)             Requested size: 409.71689pt x 206.9273pt.
  [25 <./graphics/ui_attack/angreifer_registrieren.png> <./graphics/ui_attack/angreifer_dashboard.png>]
-<graphics/ui_attack/angreifer_opfer_vehicle.png, id=753, 2569.6pt x 1302.8675pt>
+<graphics/ui_attack/angreifer_opfer_vehicle.png, id=742, 2569.6pt x 1302.8675pt>
 File: graphics/ui_attack/angreifer_opfer_vehicle.png Graphic file (type png)
 <use graphics/ui_attack/angreifer_opfer_vehicle.png>
-Package pdftex.def Info: graphics/ui_attack/angreifer_opfer_vehicle.png  used on input line 122.
+Package pdftex.def Info: graphics/ui_attack/angreifer_opfer_vehicle.png  used on input line 117.
 (pdftex.def)             Requested size: 409.71689pt x 207.7275pt.
-<graphics/ui_attack/opfer_softdelete.png, id=754, 2569.6pt x 1295.84125pt>
+<graphics/ui_attack/opfer_softdelete.png, id=743, 2569.6pt x 1295.84125pt>
 File: graphics/ui_attack/opfer_softdelete.png Graphic file (type png)
 <use graphics/ui_attack/opfer_softdelete.png>
-Package pdftex.def Info: graphics/ui_attack/opfer_softdelete.png  used on input line 141.
+Package pdftex.def Info: graphics/ui_attack/opfer_softdelete.png  used on input line 134.
 (pdftex.def)             Requested size: 409.71689pt x 206.60724pt.
  [26 <./graphics/ui_attack/angreifer_vehicles.png> <./graphics/ui_attack/angreifer_opfer_vehicle.png>]
-<graphics/curl_attack/opfer_registrieren.png, id=763, 2569.6pt x 1416.29124pt>
+<graphics/curl_attack/opfer_registrieren.png, id=751, 2569.6pt x 1416.29124pt>
 File: graphics/curl_attack/opfer_registrieren.png Graphic file (type png)
 <use graphics/curl_attack/opfer_registrieren.png>
-Package pdftex.def Info: graphics/curl_attack/opfer_registrieren.png  used on input line 161.
+Package pdftex.def Info: graphics/curl_attack/opfer_registrieren.png  used on input line 152.
 (pdftex.def)             Requested size: 409.71689pt x 225.81163pt.
-<graphics/curl_attack/opfer_create_vehicle.png, id=764, 2569.6pt x 1416.29124pt>
+<graphics/curl_attack/opfer_create_vehicle.png, id=752, 2569.6pt x 1416.29124pt>
 File: graphics/curl_attack/opfer_create_vehicle.png Graphic file (type png)
 <use graphics/curl_attack/opfer_create_vehicle.png>
-Package pdftex.def Info: graphics/curl_attack/opfer_create_vehicle.png  used on input line 177.
+Package pdftex.def Info: graphics/curl_attack/opfer_create_vehicle.png  used on input line 166.
 (pdftex.def)             Requested size: 409.71689pt x 225.81163pt.
  [27 <./graphics/ui_attack/opfer_softdelete.png> <./graphics/curl_attack/opfer_registrieren.png>]
-<graphics/curl_attack/angreifer_registrieren.png, id=771, 2569.6pt x 1416.29124pt>
+<graphics/curl_attack/angreifer_registrieren.png, id=760, 2569.6pt x 1416.29124pt>
 File: graphics/curl_attack/angreifer_registrieren.png Graphic file (type png)
 <use graphics/curl_attack/angreifer_registrieren.png>
-Package pdftex.def Info: graphics/curl_attack/angreifer_registrieren.png  used on input line 193.
+Package pdftex.def Info: graphics/curl_attack/angreifer_registrieren.png  used on input line 181.
 (pdftex.def)             Requested size: 409.71689pt x 225.81163pt.
-<graphics/curl_attack/use_vehicle_id.png, id=772, 2569.6pt x 1416.29124pt>
+<graphics/curl_attack/use_vehicle_id.png, id=761, 2569.6pt x 1416.29124pt>
 File: graphics/curl_attack/use_vehicle_id.png Graphic file (type png)
 <use graphics/curl_attack/use_vehicle_id.png>
-Package pdftex.def Info: graphics/curl_attack/use_vehicle_id.png  used on input line 209.
+Package pdftex.def Info: graphics/curl_attack/use_vehicle_id.png  used on input line 195.
 (pdftex.def)             Requested size: 409.71689pt x 225.81163pt.
  [28 <./graphics/curl_attack/opfer_create_vehicle.png> <./graphics/curl_attack/angreifer_registrieren.png>]
-<graphics/curl_attack/angreifer_delete_vehicle.png, id=779, 2569.6pt x 1416.29124pt>
+<graphics/curl_attack/angreifer_delete_vehicle.png, id=768, 2569.6pt x 1416.29124pt>
 File: graphics/curl_attack/angreifer_delete_vehicle.png Graphic file (type png)
 <use graphics/curl_attack/angreifer_delete_vehicle.png>
-Package pdftex.def Info: graphics/curl_attack/angreifer_delete_vehicle.png  used on input line 224.
+Package pdftex.def Info: graphics/curl_attack/angreifer_delete_vehicle.png  used on input line 208.
 (pdftex.def)             Requested size: 409.71689pt x 225.81163pt.
-<graphics/curl_attack/vehicle_after_delete.png, id=780, 2569.6pt x 1416.29124pt>
+<graphics/curl_attack/vehicle_after_delete.png, id=769, 2569.6pt x 1416.29124pt>
 File: graphics/curl_attack/vehicle_after_delete.png Graphic file (type png)
 <use graphics/curl_attack/vehicle_after_delete.png>
-Package pdftex.def Info: graphics/curl_attack/vehicle_after_delete.png  used on input line 240.
+Package pdftex.def Info: graphics/curl_attack/vehicle_after_delete.png  used on input line 223.
 (pdftex.def)             Requested size: 409.71689pt x 225.81163pt.
  [29 <./graphics/curl_attack/use_vehicle_id.png> <./graphics/curl_attack/angreifer_delete_vehicle.png>] [30{/usr/share/texlive/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}{/usr/share/texlive/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc} <./graphics/curl_attack/vehicle_after_delete.png>] [31] [32]) [33]
 \gdef \@abspage@last{39}
@@ -1589,18 +1589,18 @@ Package logreq Info: Writing requests to 'janik.henz@students.fhnw.ch_26FS_aufga
 
  ) 
 Here is how much of TeX's memory you used:
- 43087 strings out of 476034
- 865920 string characters out of 5792864
- 2229996 words of memory out of 6000000
+ 43073 strings out of 476034
+ 865762 string characters out of 5792864
+ 2221117 words of memory out of 6000000
  62155 multiletter control sequences out of 15000+600000
- 593149 words of font info for 179 fonts, out of 8000000 for 9000
+ 592524 words of font info for 172 fonts, out of 8000000 for 9000
  1139 hyphenation exceptions out of 8191
  104i,10n,121p,1216b,5287s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmmi9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmr12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmr17.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmri10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmro10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmssbx10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmsy9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmtk10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmtt10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmtt9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/lm/lmtti10.pfb>
-Output written on janik.henz@students.fhnw.ch_26FS_aufgabe1.pdf (39 pages, 2760337 bytes).
+Output written on janik.henz@students.fhnw.ch_26FS_aufgabe1.pdf (39 pages, 2757805 bytes).
 PDF statistics:
- 1095 PDF objects out of 1200 (max. 8388607)
- 979 compressed objects within 10 object streams
+ 1084 PDF objects out of 1200 (max. 8388607)
+ 968 compressed objects within 10 object streams
  424 named destinations out of 1000 (max. 500000)
  49199 words of extra memory for PDF output out of 51595 (max. 10000000)
 
