@@ -44,44 +44,45 @@
   <internal package="biblatex" priority="9" active="0">
     <generic>latex</generic>
     <provides type="dynamic">
-      <file>fhnw_ht_eit_latex_template.bcf</file>
+      <file>janik.henz@students.fhnw.ch_26FS_aufgabe1.bcf</file>
     </provides>
     <requires type="dynamic">
-      <file>fhnw_ht_eit_latex_template.bbl</file>
+      <file>janik.henz@students.fhnw.ch_26FS_aufgabe1.bbl</file>
     </requires>
     <requires type="static">
       <file>blx-dm.def</file>
+      <file>apa.dbx</file>
       <file>blx-compat.def</file>
       <file>biblatex.def</file>
       <file>standard.bbx</file>
-      <file>numeric.bbx</file>
-      <file>numeric-comp.bbx</file>
-      <file>ieee.bbx</file>
-      <file>numeric-comp.cbx</file>
-      <file>ieee.cbx</file>
+      <file>apa.bbx</file>
+      <file>apa.cbx</file>
       <file>biblatex.cfg</file>
       <file>german.lbx</file>
-      <file>ngerman.lbx</file>
+      <file>german-apa.lbx</file>
       <file>english.lbx</file>
+      <file>american.lbx</file>
+      <file>american-apa.lbx</file>
+      <file>english-apa.lbx</file>
     </requires>
   </internal>
   <external package="biblatex" priority="5" active="0">
     <generic>biber</generic>
     <cmdline>
       <binary>biber</binary>
-      <infile>fhnw_ht_eit_latex_template</infile>
+      <infile>janik.henz@students.fhnw.ch_26FS_aufgabe1</infile>
     </cmdline>
     <input>
-      <file>fhnw_ht_eit_latex_template.bcf</file>
+      <file>janik.henz@students.fhnw.ch_26FS_aufgabe1.bcf</file>
     </input>
     <output>
-      <file>fhnw_ht_eit_latex_template.bbl</file>
+      <file>janik.henz@students.fhnw.ch_26FS_aufgabe1.bbl</file>
     </output>
     <provides type="dynamic">
-      <file>fhnw_ht_eit_latex_template.bbl</file>
+      <file>janik.henz@students.fhnw.ch_26FS_aufgabe1.bbl</file>
     </provides>
     <requires type="dynamic">
-      <file>fhnw_ht_eit_latex_template.bcf</file>
+      <file>janik.henz@students.fhnw.ch_26FS_aufgabe1.bcf</file>
     </requires>
     <requires type="editable">
       <file>literature/beispiel_bib.bib</file>

@@ -19,7 +19,7 @@ korrekt verdrahtet. Dieses Vorgehen reduzierte den Änderungsaufwand pro
 Endpunkt, verbesserte die Konsistenz der Sicherheitslogik und senkte das Risiko,
 dass künftig neue Router erneut ohne Mandantenscoping implementiert werden.
 
-Das Testergebnis spricht für sich: Die zuvor als
+Das Testergebnis spricht für sich. Die zuvor als
 Proof-of-Concept formulierten Angriffe schlagen nach der Anpassung fehl, die neu
 hinzugefügten Regressionstests decken beide Schwachstellenklassen gezielt ab,
 und die bestehende Testsuite läuft nach Anpassung der betroffenen Alt-Tests
@@ -28,20 +28,13 @@ zeigt, dass der Sicherheitsfix nicht nur lokal funktioniert, sondern auch mit
 dem restlichen Backend vereinbar ist.
 
 Multi-Tenant-Isolation ist kein Komfortmerkmal, sie ist eine
-Systemeigenschaft. Sobald Ressourcen per UUID
-adressierbar sind, muss die Autorisierung bei jedem Zugriff explizit an den
-aktuellen Mandanten gebunden werden. Wird diese Prüfung an einer zentralen
-Abstraktion vergessen, skaliert die Schwachstelle mit der Wiederverwendung genau
-so stark wie der Architekturvorteil selbst.
+Systemeigenschaft. Sobald Ressourcen per UUID adressierbar sind, muss die
+Autorisierung bei jedem Zugriff explizit an den aktuellen Mandanten
+gebunden werden. Wird diese Prüfung an einer zentralen Abstraktion
+vergessen, skaliert die Schwachstelle mit der Wiederverwendung genauso
+stark wie der Architekturvorteil selbst. Insofern ist das beobachtete
+Muster eine klassische Verletzung des von Saltzer und Schroeder
+formulierten Prinzips \enquote{Complete Mediation}, das verlangt, jeden
+Zugriff auf ein geschütztes Objekt einzeln zu autorisieren
+\parencite{saltzer_schroeder_1975}.
 
-Ein verbleibender Prüfpunkt ausserhalb des bearbeiteten Scopes betrifft Modelle,
-die nicht über \texttt{organization\_id}, sondern über benutzerspezifische
-Beziehungen geschützt werden, insbesondere Benachrichtigungen. Dort liegt keine
-identische Schwachstelle vor, die Analyse zeigt jedoch, dass derselbe Grundsatz
-auch für andere Besitzermodelle konsequent weitergeführt werden sollte.
-
-Der Patch erfüllt die Anforderungen an eine nicht-triviale,
-sicherheitsrelevante Open-Source-Kontribution: Die Schwachstelle wurde technisch
-analysiert, reproduzierbar nachgewiesen, an der Wurzel behoben und mit einer
-umfassenden Testsuite abgesichert, eine Grundlage, die auch einem echten
-Code-Review standzuhalten verspricht.

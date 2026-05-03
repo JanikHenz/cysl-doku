@@ -1,0 +1,268 @@
+\section{Implementierung des Patches}
+\label{sec:implementierung}
+
+In diesem Kapitel wird die Behebung des Sicherheitslecks vorgenommen.
+
+\subsection{Anpassung von \texttt{get()} und \texttt{get\_or\_404()}}
+\label{sec:patch-base}
+
+Die zentrale Änderung betrifft ausschliesslich die Datei
+\texttt{app/shared/services/base.py}.
+Beide Methoden erhalten dieselben zwei optionalen Keyword-Only-Parameter, die
+bereits in \texttt{get\_multi()} und \texttt{count()} vorhanden sind:
+
+\begin{itemize}
+    \item \texttt{organization\_id: str | None = None} \textendash{} wird
+          nur ausgewertet, wenn das Modell das Attribut besitzt
+          (\texttt{hasattr}-Guard, identisch zu \texttt{get\_multi()}).
+    \item \texttt{include\_deleted: bool = False} \textendash{} filtert
+          soft-gelöschte Datensätze, sofern das Modell \texttt{deleted\_at}
+          kennt.
+\end{itemize}
+
+\texttt{get\_or\_404()} leitet beide Parameter an \texttt{get()} weiter und
+liefert \texttt{404} zurück, wenn kein Treffer gefunden wird, also sowohl bei
+nicht vorhandenen als auch bei organisationsfremden und soft-gelöschten
+Datensätzen.
+
+\texttt{delete()} wurde ebenfalls angepasst und ruft intern \texttt{get()} auf
+und gibt \texttt{organization\_id} weiter, damit auch DELETE-Operationen auf
+fremde Objekte ins Leere laufen.
+
+Der vollständige Diff der drei Methoden ist nachfolgend dargestellt:
+
+\begin{lstlisting}[style=custompython, caption={base.py \textendash{} gepatchte Methoden get(), get\_or\_404() und delete()}]
+# VORHER
+def get(self, db: Session, id: str) -> ModelType | None:
+    result = db.execute(select(self.model).where(self.model.id == id))
+    return result.scalar_one_or_none()
+
+def get_or_404(self, db: Session, id: str) -> ModelType:
+    obj = self.get(db, id)
+    if obj is None:
+        raise NotFoundError(self.model.__name__, id)
+    return obj
+
+# NACHHER
+def get(self, db, id, *, organization_id=None, include_deleted=False):
+    query = select(self.model).where(self.model.id == id)
+    if organization_id and hasattr(self.model, "organization_id"):
+        query = query.where(self.model.organization_id == organization_id)
+    if not include_deleted and hasattr(self.model, "deleted_at"):
+        query = query.where(self.model.deleted_at.is_(None))
+    return db.execute(query).scalar_one_or_none()
+
+def get_or_404(self, db, id, *, organization_id=None, include_deleted=False):
+    obj = self.get(db, id,
+                   organization_id=organization_id,
+                   include_deleted=include_deleted)
+    if obj is None:
+        raise NotFoundError(self.model.__name__, id)
+    return obj
+
+def delete(self, db, id, soft_delete=True, *, organization_id=None):
+    obj = self.get(db, id, organization_id=organization_id)
+    if obj is None:
+        return None
+    # (Soft-/Hard-Delete-Logik unveraendert)
+\end{lstlisting}
+
+Die neuen Parameter sind keyword-only und optional, womit die
+Signatur rückwärtskompatibel bleibt und das Refactoring der Aufrufer
+pro Modul möglich wird. Der Mandantenfilter greift aber erst, sobald
+ein Aufrufer \texttt{organization\_id} tatsächlich mitgibt. Die
+Umstellung aller 78 Pflicht-Aufrufer zeigt der nächste Abschnitt.
+
+\subsection{Anpassung aller Aufrufer}
+\label{sec:patch-callers}
+
+Alle 78 als Pflicht-Fix klassifizierten
+\texttt{get\_or\_404()}-Aufrufer (Tabelle \ref{tab:callers_summary})
+sowie die betroffenen \texttt{delete()}-Aufrufe werden nach einem
+einheitlichen Muster angepasst.
+
+\begin{lstlisting}[style=custompython, caption={Aufruf-Muster vor und nach dem Patch (Beispiel Fahrzeug-Endpunkt).}]
+# VORHER -- kein Mandanten-Check
+vehicle = vehicle_service.get_or_404(db, vehicle_id)
+
+# NACHHER -- organisation_id wird mitgegeben
+vehicle = vehicle_service.get_or_404(
+    db, vehicle_id, organization_id=current_user.organization_id
+)
+\end{lstlisting}
+
+Das gleiche Muster gilt für \texttt{delete()}-Aufrufe. Die fünf
+Aufrufstellen in \texttt{shared/api/\allowbreak organizations.py}
+bleiben unverändert, weil das \texttt{Organization}-Modell keinen
+Mandantenschlüssel führt und die Endpunkte ausschliesslich für
+Super-Admins zugänglich sind.
+
+\paragraph{Service-interne Cross-Service-Lookups.}
+Fünf Service-Methoden rufen intern \texttt{get\_or\_404()} einer
+anderen Service-Instanz auf. Sie erhalten einen optionalen Parameter
+\texttt{organization\_id}, der an das innere \texttt{get\_or\_404()}
+durchgereicht wird: \texttt{dispense\_fuel()},
+\texttt{receive\_\allowbreak delivery()}, \texttt{adjust\_level()},
+\texttt{update\_maintenance()} der Klasse \texttt{FuelPumpService}
+sowie \texttt{return\_tool()} der Klasse \texttt{ToolAssignmentService}.
+Die aufrufenden API-Endpunkte befüllen den Parameter mit
+\texttt{current\_user.\allowbreak organization\_id}.
+
+\begin{lstlisting}[style=custompython, caption={Service-interner Cross-Service-Lookup mit Mandantencheck.}]
+# fleet/services/fuel_pump_delivery.py -- create()
+pump = fuel_pump_service.get_or_404(
+    db, obj_in.pump_id, organization_id=obj_in.organization_id
+)
+
+# fleet/services/fuel.py -- create()
+vehicle = vehicle_service.get_or_404(
+    db, obj_in.vehicle_id, organization_id=obj_in.organization_id
+)
+\end{lstlisting}
+
+\subsection{Behandlung von Modellen ohne \texttt{organization\_id}}
+\label{sec:patch-no-org}
+
+Der \texttt{hasattr}-Guard in \texttt{get()} stellt sicher, dass ein
+Aufruf mit \texttt{organization\_id} bei Modellen ohne dieses Feld
+stillschweigend ignoriert wird. Zwei dieser Modelle brauchen dennoch
+eigene Regeln.
+
+\begin{itemize}
+    \item \texttt{Organization} ist der Mandant selbst. Die Endpunkte
+          in \texttt{organizations.py} sind bereits ausschliesslich für
+          Super-Admins zugänglich und bleiben unverändert.
+    \item \texttt{Notification} ist nicht an eine Organisation, sondern
+          über \texttt{user\_id} an den jeweiligen Benutzer gebunden.
+          Der Schutz erfolgt deshalb über einen expliziten
+          Eigentümercheck im Router (siehe
+          Abschnitt~\ref{sec:patch-zusatzbefunde}, Absatz
+          \emph{Notifications}).
+\end{itemize}
+
+\subsection{Fixes ausserhalb von \texttt{BaseService}}
+\label{sec:patch-zusatzbefunde}
+
+Die in Abschnitt \ref{sec:befunde-ausserhalb-baseservice} dokumentierten
+Lücken betreffen Code, der \texttt{BaseService} umgeht oder nach einem
+\texttt{get\_or\_404}-Lookup keinen Eigentümercheck vornimmt. Der
+Wurzel-Fix greift dort nicht, weshalb diese Stellen einzeln behoben
+werden. Alle Änderungen folgen dem bereits eingeführten Muster,
+\texttt{current\_user.\allowbreak organization\_id} oder
+\texttt{current\_user.\allowbreak id} wird dem Service oder einer
+nachgelagerten Prüfung explizit übergeben.
+
+\paragraph{Notifications \textendash{} Ownership-Check nach dem Lookup.}
+Für Notifications genügt der Mandantenfilter nicht, weil sie an eine
+\texttt{user\_id} gebunden sind. Nach dem \texttt{get\_or\_404}-Lookup
+wird in GET, \texttt{POST /read} und DELETE geprüft, ob
+\texttt{notification.user\_id == current\_user.id} gilt. Andernfalls
+wird \texttt{404} zurückgegeben, um keine Information über fremde IDs
+preiszugeben.
+
+\paragraph{SAT-Assistances \textendash{} \texttt{get\_detail()} mit Mandanten-Parameter.}
+\texttt{AssistanceService.get\_detail()} baut eigene SQLAlchemy-Filter.
+Die Signatur erhält einen Parameter \texttt{organization\_id}, den der
+Router mit \texttt{current\_user.\allowbreak organization\_id} befüllt.
+Der zusätzliche \texttt{WHERE organization\_id = \$1} fliesst in alle
+Teilabfragen der Methode ein.
+
+\paragraph{Admin-Endpunkte in \texttt{users.py}.}
+Die drei Router-Aufrufe von GET, PATCH und DELETE werden durch die im
+vorherigen Abschnitt beschriebene Umstellung aller
+\texttt{get\_or\_404}-/\texttt{delete}-Aufrufer mitgezogen, sobald
+\texttt{organization\_id=\allowbreak current\_user.\allowbreak organization\_id}
+ergänzt wird. Der zentrale Mandantenfilter in \texttt{BaseService.get()}
+übernimmt damit auch hier die Prüfung.
+
+\paragraph{DELETE in \texttt{sat/api/attachments.py}.}
+\texttt{SatAttachmentService.delete()} nimmt bereits einen
+\texttt{organization\_id}-Parameter entgegen, der Router übergab ihn
+jedoch nicht. Der Router-Aufruf wird nach demselben Muster wie in
+Abschnitt \ref{sec:patch-callers} um
+\texttt{organization\_id=\allowbreak current\_user.\allowbreak organization\_id}
+ergänzt, womit der im Service vorhandene Filter tatsächlich greift.
+
+\paragraph{GPS \textendash{} Trip-Routen mit Mandantencheck.}
+\begin{sloppypar}
+Drei Trip-Routen wurden entlang desselben Musters abgesichert.
+Bei \texttt{POST\allowbreak /trips/\allowbreak \{trip\_id\}/\allowbreak position}
+wird vor dem Schreiben einer Position der zugehörige Trip über
+\texttt{trip\_service.\allowbreak get\_or\_404(db,\allowbreak{} trip\_id,\allowbreak{}
+organization\_id=current\_user.\allowbreak organization\_id)} geladen.
+\texttt{POST\allowbreak /trips/\allowbreak \{trip\_id\}/\allowbreak end} und
+\texttt{GET\allowbreak /trips/\allowbreak \{trip\_id\}/\allowbreak route}
+laden den Trip ebenfalls über die gleiche \texttt{get\_or\_404}-Signatur,
+bevor sie das Trip beenden bzw. die Routenpunkte zurückgeben. Gehört der
+Trip nicht zum Mandanten des Aufrufers, brechen alle drei Endpunkte mit
+\texttt{404} ab, bevor überhaupt gelesen oder geschrieben wird.
+\end{sloppypar}
+
+\paragraph{FK-List-Methoden \textendash{} Pflichtparameter
+\texttt{organization\_id}.}
+Alle 19 betroffenen List-Methoden erhalten einen
+\textit{Pflicht}-Parameter \texttt{organization\_id: str} ohne Default.
+Damit wird der Mandantenfilter zwingend an die Abfrage gehängt.
+Vergisst ein Aufrufer den Parameter, reagiert Python mit
+\texttt{TypeError} zur Laufzeit, was deutlich sicherer ist als ein
+stilles Sicherheitsleck bei optionalem Parameter. Alle zugehörigen
+Router befüllen den Parameter mit
+\texttt{current\_user.\allowbreak organization\_id}.
+
+\subsection{Zusammenfassung: Befund, Fix und Testabdeckung}
+\label{sec:patch-uebersicht}
+
+Tabelle \ref{tab:analyse_patch_test} verknüpft jeden Befund aus der
+Analyse mit dem zugehörigen Patch-Unterabschnitt und dem Test, der den
+Fix absichert. Die Smoke- und Integrationstests der bestehenden Suite
+dienen in allen Fällen als zusätzlicher Regressionsschutz.
+
+\begin{table}[H]
+      \begin{center}
+            \renewcommand{\arraystretch}{1.3}
+            \begin{tabular}{|p{4.8cm}|l|l|p{3.8cm}|}
+                  \hline
+                  \textbf{Befund (Issue)}
+                   & \textbf{Analyse}
+                   & \textbf{Fix}
+                   & \textbf{Test}                                                                                   \\
+                  \hline
+                  IDOR in \texttt{get()} / \texttt{get\_or\_404()} (\#5)
+                   & \ref{sec:analyse}
+                   & \ref{sec:patch-base}
+                   & Angriffsklasse 1                                                                                \\
+                  Soft-Delete-Bypass in \texttt{get()} / \texttt{get\_or\_404()} (\#14)
+                   & \ref{sec:analyse}
+                   & \ref{sec:patch-base}
+                   & Angriffsklasse 2                                                                                \\
+                  78 Router-Aufrufer ohne \texttt{organization\_id}
+                   & \ref{sec:analyse}
+                   & \ref{sec:patch-callers}
+                   & \texttt{TestIDOR}, \texttt{TestIDOREmployee}                                                    \\
+                  5 Service-interne Cross-Service-Aufrufe
+                   & \ref{sec:analyse}
+                   & \ref{sec:patch-callers}
+                   & Smoke-Tests \texttt{fuel}/\texttt{tool}                                                         \\
+                  Notifications ohne Ownership-Check
+                   & \ref{sec:befunde-ausserhalb-baseservice}
+                   & \ref{sec:patch-zusatzbefunde}
+                   & Smoke-Tests \texttt{notifications}                                                              \\
+                  SAT-Assistances ohne Mandantenfilter
+                   & \ref{sec:befunde-ausserhalb-baseservice}
+                   & \ref{sec:patch-zusatzbefunde}
+                   & Smoke-Tests \texttt{sat}                                                                        \\
+                  GPS-Position ohne Trip-Ownership-Check
+                   & \ref{sec:befunde-ausserhalb-baseservice}
+                   & \ref{sec:patch-zusatzbefunde}
+                   & Smoke-Tests \texttt{gps}                                                                        \\
+                  19 FK-List-Methoden ohne Mandantenfilter
+                   & \ref{sec:befunde-ausserhalb-baseservice}
+                   & \ref{sec:patch-zusatzbefunde}
+                   & Smoke-/Integrationstests                                                                        \\
+                  \hline
+            \end{tabular}
+      \end{center}
+      \caption{Zuordnung jedes Befunds zu seinem Patch-Abschnitt und der
+            zugehörigen Testabdeckung.}
+      \label{tab:analyse_patch_test}
+\end{table}

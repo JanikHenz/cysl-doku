@@ -8,15 +8,18 @@
 %\newcommand{\logofilename}{FHNW_HSI_EN}
 %%%%%
 %%%%% Bibliographie entweder im IEEE- oder im APA-Stil:
-\usepackage[style=ieee,urldate=comp,backend=biber]{biblatex}
-%\usepackage[style=apa,urldate=comp,backend=biber]{biblatex}
+%\usepackage[style=ieee,urldate=comp,backend=biber]{biblatex}
+\usepackage[style=apa,urldate=comp,backend=biber]{biblatex}
 %%%%%
+\DeclareLanguageMapping{ngerman}{german-apa}
 \addbibresource{literature/beispiel_bib.bib}
 
 % Python-Listings-Style fuer Code-Beispiele
 \lstdefinestyle{custompython}{
   belowcaptionskip=1\baselineskip,
   breaklines=true,
+  breakatwhitespace=false,
+  columns=flexible,
   frame=single,
   numbers=left,
   numberstyle=\tiny,
@@ -27,6 +30,26 @@
   commentstyle=\itshape\color{purple!40!black},
   identifierstyle=\color{blue},
   stringstyle=\color{orange},
+}
+
+% Bash-/Shell-Listings-Style (z.\,B. fuer Curl-Angriffsreproduktion im Appendix)
+\lstdefinestyle{custombash}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=flexible,
+  postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space},
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  language=bash,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{purple!40!black},
+  identifierstyle=\color{black},
+  stringstyle=\color{orange},
+  literate={ä}{{\"a}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {Ä}{{\"A}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1 {ß}{{\ss}}1,
 }
 
 \title{Sicherheitspatch: IDOR im FleetOptima-Backend}
@@ -54,9 +77,8 @@
     Studentin/Student & Janik Henz              \\[2ex]
     Dozent/Betreuer   & Martin Gwerder          \\[2ex]
     Studiengang       & Informatik Bsc          \\[2ex]
-    Semester          & Frühjahrssemester 2026  \\[2ex]
-    Modul             & Cyber Sicherheit (CySL) \\[2ex]
-    Vereinbarung      & öffentlich
+    Semester          & Frühlingssemester 2026  \\[2ex]
+    Modul             & Cyber Sicherheit (CYSL) \\[2ex]
 \end{tabular}
 
 % The terms to be used in an English report are: Student, Expert, Supervisor, Client, Study Program, Project Number, Agreement.
@@ -87,8 +109,8 @@
 \pagenumbering{arabic}
 \include{sections/einleitung}
 \include{sections/grundlagen}
-\include{sections/this}
-\include{sections/that}
+\include{sections/analyse}
+\include{sections/patch}
 \include{sections/testing}
 \include{sections/schluss}
 
@@ -99,11 +121,9 @@
 
 %%---APPENDIX----------------------------------------------------------------------------
 \include{sections/eigenstaendigkeit}
-\selectlanguage{english}				%ngerman or english
-\include{sections/authenticity}
 \selectlanguage{ngerman}				%ngerman or english
 \include{sections/appendix}
-
+\end{appendix}
 %%---NOTES for DEBUG---------------------------------------------------------------------
 %\newpage
 %\listoftodos[\section{Todo-Notes}]

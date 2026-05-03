@@ -1,0 +1,21 @@
+\babel@toc {ngerman}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\contentsline {figure}{\numberline {A.1}{\ignorespaces Login-/Registrierungsseite der Anwendung.\relax }}{22}{figure.caption.12}%
+\contentsline {figure}{\numberline {A.2}{\ignorespaces Registrierung des Opfers als neue Organisation.\relax }}{23}{figure.caption.13}%
+\contentsline {figure}{\numberline {A.3}{\ignorespaces Dashboard des Opfer-Mandanten nach dem Login.\relax }}{23}{figure.caption.14}%
+\contentsline {figure}{\numberline {A.4}{\ignorespaces Das Opfer legt ein Fahrzeug (\texttt {OPFER-001}) an.\relax }}{24}{figure.caption.15}%
+\contentsline {figure}{\numberline {A.5}{\ignorespaces Fahrzeugliste des Opfers. Die URL zeigt die UUID des neu erstellten Fahrzeugs, die der Angreifer im nächsten Schritt benötigt.\relax }}{24}{figure.caption.16}%
+\contentsline {figure}{\numberline {A.6}{\ignorespaces Registrierung des Angreifers als eigene Organisation.\relax }}{25}{figure.caption.17}%
+\contentsline {figure}{\numberline {A.7}{\ignorespaces Leeres Dashboard des Angreifer-Mandanten unmittelbar nach der Registrierung.\relax }}{25}{figure.caption.18}%
+\contentsline {figure}{\numberline {A.8}{\ignorespaces Fahrzeugliste des Angreifers \textendash {} ebenfalls leer. Die Oberfläche bestätigt also korrekt, dass der Angreifer auf dem Listenweg keine fremden Daten sehen kann.\relax }}{26}{figure.caption.19}%
+\contentsline {figure}{\numberline {A.9}{\ignorespaces IDOR via Browser \textendash {} der Angreifer sieht das Fahrzeug (\texttt {OPFER-001}) des fremden Mandanten, obwohl sein eigener Tenant keine Fahrzeuge besitzt.\relax }}{26}{figure.caption.20}%
+\contentsline {figure}{\numberline {A.10}{\ignorespaces Der soft-gelöschte Datensatz bleibt vor dem Patch über die direkte URL weiterhin erreichbar \textendash {} sowohl für das Opfer selbst als auch für den Angreifer.\relax }}{27}{figure.caption.21}%
+\contentsline {figure}{\numberline {A.11}{\ignorespaces Registrierung des Opfers per \texttt {POST /api/v1/auth/register}. Die API liefert einen JWT zurück, den das Opfer für alle weiteren Requests verwendet.\relax }}{27}{figure.caption.22}%
+\contentsline {figure}{\numberline {A.12}{\ignorespaces Erzeugung eines Fahrzeugs im Kontext des Opfers per \texttt {POST /api/v1/vehicles}. Das Feld \texttt {id} wird als \texttt {VID} für die späteren Angriffsaufrufe gespeichert.\relax }}{28}{figure.caption.23}%
+\contentsline {figure}{\numberline {A.13}{\ignorespaces Registrierung des Angreifers mit eigener Organisation. Der zurückgegebene JWT enthält eine andere \texttt {org\_id} als der des Opfers.\relax }}{28}{figure.caption.24}%
+\contentsline {figure}{\numberline {A.14}{\ignorespaces IDOR per API \textendash {} der Angreifer verwendet die gestohlene UUID und erhält trotz fremdem JWT den vollen Datensatz zurück.\relax }}{29}{figure.caption.25}%
+\contentsline {figure}{\numberline {A.15}{\ignorespaces Unautorisierter \texttt {DELETE}-Aufruf des Angreifers gegen das Fahrzeug des Opfers. HTTP-Status \texttt {204} signalisiert den Erfolg.\relax }}{29}{figure.caption.26}%
+\contentsline {figure}{\numberline {A.16}{\ignorespaces Das soft-gelöschte Fahrzeug bleibt vor dem Patch per direkter ID-Abfrage sichtbar. Das Feld \texttt {deleted\_at} ist zwar gesetzt, die Ressource wird aber trotzdem ausgeliefert.\relax }}{30}{figure.caption.27}%
+\babel@toc {ngerman}{}\relax 

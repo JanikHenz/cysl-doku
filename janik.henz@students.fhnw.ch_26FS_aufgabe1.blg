@@ -1,0 +1,19 @@
+[0] Config.pm:328> INFO - This is Biber 2.21
+[0] Config.pm:331> INFO - Logfile is 'janik.henz@students.fhnw.ch_26FS_aufgabe1.blg'
+[51] biber:342> INFO - === Sa Mai  2, 2026, 19:16:30
+[62] Biber.pm:421> INFO - Reading 'janik.henz@students.fhnw.ch_26FS_aufgabe1.bcf'
+[121] Biber.pm:1002> INFO - Found 6 citekeys in bib section 0
+[134] Biber.pm:4487> INFO - Processing section 0
+[141] Biber.pm:4678> INFO - Looking for bibtex file 'literature/beispiel_bib.bib' for section 0
+[142] bibtex.pm:1713> INFO - LaTeX decoding ...
+[146] bibtex.pm:1519> INFO - Found BibTeX data source 'literature/beispiel_bib.bib'
+[194] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[194] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[194] Biber.pm:4307> INFO - Sorting list 'apa/apasortcite//global/global/global' of type 'entry' with template 'apa' and locale 'de-DE'
+[194] Biber.pm:4313> INFO - No sort tailoring available for locale 'de-DE'
+[206] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[206] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[206] Biber.pm:4307> INFO - Sorting list 'apa/global//global/global/global' of type 'entry' with template 'apa' and locale 'de-DE'
+[206] Biber.pm:4313> INFO - No sort tailoring available for locale 'de-DE'
+[215] bbl.pm:676> INFO - Writing 'janik.henz@students.fhnw.ch_26FS_aufgabe1.bbl' with encoding 'UTF-8'
+[218] bbl.pm:779> INFO - Output to janik.henz@students.fhnw.ch_26FS_aufgabe1.bbl

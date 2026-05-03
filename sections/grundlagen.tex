@@ -3,26 +3,27 @@
 
 \subsection{Multi-Tenant SaaS-Architektur}
 
-In einer Multi-Tenant-Architektur teilen mehrere Mandanten (Organisationen)
-dieselbe Applikationsinstanz und, im Shared-Database-Modell, auch dieselbe
-Datenbankinstanz. Die logische Trennung der Mandantendaten erfolgt über ein
-Diskriminator-Attribut (hier: \texttt{organization\_id}), das in jeder
-geschäftsrelevanten Tabelle vorhanden ist. Die Applikationslogik muss bei jedem
-Dateienbankzugriff sicherstellen, dass ausschliesslich Datensätze des aktuell
-authentifizierten Mandanten ausgegeben werden. Fehlt diese Filterung an einer
-zentralen Stelle (etwa in einer gemeinsamen Basisklasse), sind potenziell
-alle darauf aufbauenden Endpunkte betroffen.
+dnchub-app ist so gebaut, dass sich mehrere Organisationen eine einzige
+laufende Anwendungsinstanz samt einer gemeinsamen Datenbank teilen. Jede
+Zeile in einer geschäftsrelevanten Tabelle trägt ein zusätzliches Feld
+namens \texttt{organization\_id}, das als Unterscheidungsmerkmal dient.
+Damit Mandant A niemals Daten von Mandant B zu sehen bekommt, muss jede
+SQL-Abfrage dieses Feld in ihre \texttt{WHERE}-Klausel aufnehmen und es
+mit dem Wert aus dem Session-Token des eingeloggten Benutzers abgleichen.
+Wird dieser Abgleich zentral an einer Stelle vergessen, die später von
+vielen Endpunkten verwendet wird, vervielfacht sich die Lücke praktisch
+auf das gesamte Modul.
 
 \subsection{Insecure Direct Object Reference (IDOR)}
 
-IDOR ist laut OWASP \cite{owasp_idor} eine Unterklasse von \emph{Broken Access
-      Control} (OWASP Top 10, A01) und in CWE-639 \cite{cwe_639} als
-\enquote{Authorization Bypass Through User-Controlled Key} beschrieben.
-Bei einem IDOR-Angriff manipuliert ein Angreifer einen direkt
-benutzergesteuerten Bezeichner (in diesem Fall eine UUID) um auf Ressourcen
-zuzugreifen, ohne eine Autorisierungsprüfung zu durchlaufen.
+IDOR bezeichnet eine Zugriffskontrolllücke, bei der eine Anwendung
+einen vom Client frei wählbaren Bezeichner, etwa eine UUID im URL-Pfad,
+ohne Berechtigungsabgleich direkt an die Datenbank weiterreicht
+\parencite{owasp_top10_a01}. Der Aufrufer kann den Bezeichner
+austauschen und gelangt so an Daten, die ihm nicht gehören. Wie sich
+das in dnchub-app konkret äussert, zeigt der folgende
+Ablauf in fünf Schritten:
 
-\textbf{Angriffsszenario auf dnchub-app}
 \begin{enumerate}
       \item Angreifer authentifiziert sich als Benutzer von Organisation A.
       \item Über einen normalen API-Aufruf erhält er eine gültige UUID eines
@@ -39,26 +40,15 @@ gehen, kann der Angreifer fremde Datensätze auch verändern oder löschen.
 
 \subsection{Soft-Delete-Muster}
 
-Das Soft-Delete-Muster markiert zu löschende Datensätze mit einem Zeitstempel
-(\texttt{deleted\_at}) statt sie physisch zu entfernen. Dies ermöglicht
-Audit-Trails und einfache Wiederherstellung. Die Korrektheit des Musters setzt
-voraus, dass alle Abfragen konsistent nach \texttt{deleted\_at IS NULL} filtern.
-Wird dies, wie vorliegend in \texttt{get()} und \texttt{get\_or\_404()},
-unterlassen, sind soft-gelöschte Datensätze weiterhin per direkter ID-Abfrage
-zugänglich (GitHub Issue \#14 \cite{github_issue_14}).
-
-\subsection{CVSS und CWE-Klassifikation}
-
-Der Common Vulnerability Scoring System (CVSS) v3.1 \cite{first_cvss31}
-bewerte Schwachstellen auf einer Skala von 0 bis 10.
-Die Schwachstelle in Issue \#5 erhält einen Score von \textbf{9.3 (Kritisch)}
-mit folgender Vektorbewertung:
-
-\begin{itemize}
-      \item \textbf{AV:N}, Angriff über das Netzwerk möglich
-      \item \textbf{AC:L}, Angriffskomplexität niedrig (keine Sonderbedingungen)
-      \item \textbf{PR:L}, niedrige Privilegien erforderlich (nur Login nötig)
-      \item \textbf{UI:N}, keine Benutzerinteraktion erforderlich
-      \item \textbf{C:H / I:H / A:H}, Hoch: Vertraulichkeit, Integrität und
-            Verfügbarkeit aller mandantenübergreifenden Daten betroffen
-\end{itemize}
+Wenn ein Benutzer in dnchub-app auf \enquote{Löschen} klickt, verschwindet
+der betroffene Eintrag nicht wirklich aus der Datenbank. Stattdessen wird
+die Spalte \texttt{deleted\_at} mit dem aktuellen Zeitstempel befüllt und
+die Zeile bleibt physisch erhalten. Dieses Vorgehen hat zwei praktische
+Vorteile. Zum einen lassen sich so Audit-Trails erstellen, zum anderen
+kann ein versehentlich gelöschter Datensatz ohne Backup wiederhergestellt
+werden. Der Ansatz funktioniert allerdings nur unter einer Bedingung. Jede
+lesende Abfrage muss die Klausel \texttt{deleted\_at IS NULL} enthalten,
+sonst verhält sich die \enquote{Löschung} gegenüber dem Aufrufer wie eine
+blosse Markierung. Genau diese Klausel fehlt in den Methoden
+\texttt{get()} und \texttt{get\_or\_404()}, was Issue~\#14
+\parencite{github_issue_14} als eigenständige Schwachstelle einordnet.

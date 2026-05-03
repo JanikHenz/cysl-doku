@@ -1,38 +1,40 @@
 \section*{Abstract}
 
-Diese Arbeit dokumentiert die Analyse und Behebung einer
-Sicherheitslücke im Open-Source-Projekt \emph{dnchub-app} (FleetOptima),
-einem mandantenfähigen Flottenmanagement System. Die Schwachstelle, klassifiziert als \emph{Insecure Direct Object Reference}
-mit einem CVSS-Score von 9.3, betrifft die zentrale
-Datenbankzugriffsklasse \texttt{BaseService} im Python/FastAPI-Backend.
-Mangels \texttt{organization\_id}-Filterung in \texttt{get\_or\_404()} kann
-jeder authentifizierte Benutzer Ressourcen beliebiger anderer Mandanten lesen,
-modifizieren oder löschen, allein per bekannter UUID (GitHub Issue \#5).
-Zusätzlich erlaubt das Fehlen eines \texttt{deleted\_at}-Filters den Zugriff
-auf soft-gelöschte Datensätze per direkter ID-Abfrage (GitHub Issue \#14).
+Diese Arbeit behandelt einen Sicherheitspatch für das Open-Source-Projekt
+dnchub-app (FleetOptima), ein mandantenfähiges Flottenmanagement-System.
+Zwei Issues im Repository des Projekts liessen sich auf dieselbe Stelle
+im Backend zurückführen, nämlich die generische Zugriffsklasse
+\texttt{BaseService} innerhalb der Python- und FastAPI-Codebase. Weil dort
+beim Einzelzugriff per UUID weder die \texttt{organiza\-tion\_id} noch
+das \texttt{deleted\_at}-Flag berücksichtigt wurden, konnte jeder
+angemeldete Benutzer Datensätze fremder Mandanten lesen, verändern und
+löschen, wie in Issue \#5 beschrieben \parencite{github_issue_5}.
+Ausserdem konnten soft-gelöschte Einträge weiterhin per UUID
+aufgerufen werden, wie Issue \#14 belegt \parencite{github_issue_14}.
 
-Der Patch greift direkt an der Wurzel an. Die Basisklasse erhält zwei neue
-Parameter; ein einziger Commit schützt damit über 90 API-Endpunkte auf einmal.
-Für beide Angriffsklassen entstehen automatisierte Sicherheitstests, die
-den Angriff auf dem Originalcode reproduzieren und nach dem Patch als
-Regressionstests weiterbestehen.
+Der Patch setzt direkt an der Wurzel an, indem die Basisklasse zwei
+zusätzliche Parameter erhält und die fehlenden Filter dort einmalig
+einzieht. Dadurch wird mit einer kleinen Änderung über 90 abhängige
+Endpunkte abgesichert. Zusätzlich entstehen automatisierte Integrationstests,
+die den Angriff gegen den ursprünglichen Code nachstellen und nach dem
+Fix als Regressionsschutz dienen.
 
 \vspace{2ex}
 
-\textbf{Keywords:}
-
-IDOR, CWE-639, Multi-Tenant Authorization, Soft-Delete Bypass, FastAPI,
-SQLAlchemy, Security Patch
+\noindent Keywords: IDOR, CWE-639, Multi-Tenant Authorization,
+Soft-Delete Bypass, FastAPI, SQLAlchemy, Security Patch
 
 \clearpage
 
 \section*{Vorwort}
 
-Dieses Dokument entstand im Modul \emph{Cyber Sich (Cysl)} an der FHNW
-Hochschule für Technik im Frühjahrssemester 2026. Aufgabe war es, für ein
-reales Open-Source-Projekt auf GitHub einen nicht-trivialen Sicherheitspatch
-einzureichen. Die Wahl fiel auf \emph{dnchub-app}: Das Projekt hatte offene,
-konkret beschriebene Security-Issues, eine realistische Codebase und einen
-aktiven Repository-Owner, der per Code-Review Feedback gab. Das Projekt wurde
-geforkt. Alle Änderungen liegen auf einem dedizierten Feature-Branch.
+Dieses Dokument entstand im Modul Cyber Sicherheit (CYSL) an der FHNW
+Hochschule für Technik im Frühlingssemester 2026. Aufgabe war es, für ein
+reales Open-Source-Projekt auf GitHub einen
+Sicherheitspatch einzureichen. Nach Abklärung mit dem Dozenten fiel
+die Wahl auf dnchub-app. Das Projekt brachte mehrere offene und
+konkret beschriebene Security-Issues mit, eine realistisch gewachsene
+Codebase und einen aktiven Repository-Owner. Das Repository wurde
+geforkt, sämtliche Änderungen liegen auf einem eigens dafür angelegten
+Feature-Branch.
 

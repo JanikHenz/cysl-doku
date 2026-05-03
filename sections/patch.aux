@@ -1,20 +1,26 @@
 \relax 
 \providecommand\hyper@newdestlabel[2]{}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Implementierung des Patches}{10}{section.4}\protected@file@percent }
-\newlabel{sec:implementierung}{{4}{10}{Implementierung des Patches}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Anpassung von \texttt  {get()} und \texttt  {get\_or\_404()}}{10}{subsection.4.1}\protected@file@percent }
-\newlabel{sec:patch-base}{{4.1}{10}{Anpassung von \texttt {get()} und \texttt {get\_or\_404()}}{subsection.4.1}{}}
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}{\ignorespaces base.py -- gepatchte Methoden get(), get\_or\_404() und delete()}}{10}{lstlisting.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Anpassung aller Aufrufer}{11}{subsection.4.2}\protected@file@percent }
-\newlabel{sec:patch-callers}{{4.2}{11}{Anpassung aller Aufrufer}{subsection.4.2}{}}
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}{\ignorespaces Aufruf-Muster vor und nach dem Patch (Beispiel: Fahrzeug-Endpunkt)}}{11}{lstlisting.4}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}{\ignorespaces Service-interner Cross-Service-Lookup mit org-Check}}{11}{lstlisting.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Behandlung von Modellen ohne \texttt  {organization\_id}}{12}{subsection.4.3}\protected@file@percent }
-\newlabel{sec:patch-no-org}{{4.3}{12}{Behandlung von Modellen ohne \texttt {organization\_id}}{subsection.4.3}{}}
-\@setckpt{sections/that}{
-\setcounter{page}{13}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Implementierung des Patches}{12}{section.4}\protected@file@percent }
+\newlabel{sec:implementierung}{{4}{12}{Implementierung des Patches}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Anpassung von \texttt  {get()} und \texttt  {get\_or\_404()}}{12}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:patch-base}{{4.1}{12}{Anpassung von \texttt {get()} und \texttt {get\_or\_404()}}{subsection.4.1}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}{\ignorespaces base.py \textendash {} gepatchte Methoden get(), get\_or\_404() und delete()}}{12}{lstlisting.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Anpassung aller Aufrufer}{13}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:patch-callers}{{4.2}{13}{Anpassung aller Aufrufer}{subsection.4.2}{}}
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}{\ignorespaces Aufruf-Muster vor und nach dem Patch (Beispiel Fahrzeug-Endpunkt).}}{13}{lstlisting.8}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {9}{\ignorespaces Service-interner Cross-Service-Lookup mit Mandantencheck.}}{13}{lstlisting.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Behandlung von Modellen ohne \texttt  {organization\_id}}{13}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:patch-no-org}{{4.3}{13}{Behandlung von Modellen ohne \texttt {organization\_id}}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Fixes ausserhalb von \texttt  {BaseService}}{14}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:patch-zusatzbefunde}{{4.4}{14}{Fixes ausserhalb von \texttt {BaseService}}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Zusammenfassung: Befund, Fix und Testabdeckung}{14}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:patch-uebersicht}{{4.5}{14}{Zusammenfassung: Befund, Fix und Testabdeckung}{subsection.4.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4.1}{\ignorespaces Zuordnung jedes Befunds zu seinem Patch-Abschnitt und der zugehörigen Testabdeckung.\relax }}{15}{table.caption.10}\protected@file@percent }
+\newlabel{tab:analyse_patch_test}{{4.1}{15}{Zuordnung jedes Befunds zu seinem Patch-Abschnitt und der zugehörigen Testabdeckung.\relax }{table.caption.10}{}}
+\@setckpt{sections/patch}{
+\setcounter{page}{16}
 \setcounter{equation}{0}
-\setcounter{enumi}{4}
+\setcounter{enumi}{5}
 \setcounter{enumii}{0}
 \setcounter{enumiii}{0}
 \setcounter{enumiv}{0}
@@ -22,16 +28,16 @@
 \setcounter{mpfootnote}{0}
 \setcounter{part}{0}
 \setcounter{section}{4}
-\setcounter{subsection}{3}
+\setcounter{subsection}{5}
 \setcounter{subsubsection}{0}
 \setcounter{paragraph}{0}
 \setcounter{subparagraph}{0}
 \setcounter{figure}{0}
-\setcounter{table}{0}
+\setcounter{table}{1}
 \setcounter{section@level}{2}
-\setcounter{Item}{19}
+\setcounter{Item}{5}
 \setcounter{Hfootnote}{0}
-\setcounter{bookmark@seq@number}{23}
+\setcounter{bookmark@seq@number}{30}
 \setcounter{caption@flags}{2}
 \setcounter{continuedfloat}{0}
 \setcounter{float@type}{8}
@@ -48,10 +54,10 @@
 \setcounter{citetotal}{0}
 \setcounter{multicitecount}{0}
 \setcounter{multicitetotal}{0}
-\setcounter{instcount}{7}
-\setcounter{maxnames}{3}
-\setcounter{minnames}{3}
-\setcounter{maxitems}{3}
+\setcounter{instcount}{8}
+\setcounter{maxnames}{2}
+\setcounter{minnames}{1}
+\setcounter{maxitems}{999}
 \setcounter{minitems}{1}
 \setcounter{citecounter}{0}
 \setcounter{maxcitecounter}{0}
@@ -63,7 +69,7 @@
 \setcounter{maxextratitle}{0}
 \setcounter{maxextratitleyear}{0}
 \setcounter{maxextraname}{2}
-\setcounter{maxextradate}{0}
+\setcounter{maxextradate}{2}
 \setcounter{maxextraalpha}{0}
 \setcounter{abbrvpenalty}{50}
 \setcounter{highnamepenalty}{50}
@@ -110,6 +116,14 @@
 \setcounter{savedshortauthor}{0}
 \setcounter{shorteditor}{0}
 \setcounter{savedshorteditor}{0}
+\setcounter{narrator}{0}
+\setcounter{savednarrator}{0}
+\setcounter{execproducer}{0}
+\setcounter{savedexecproducer}{0}
+\setcounter{execdirector}{0}
+\setcounter{savedexecdirector}{0}
+\setcounter{with}{0}
+\setcounter{savedwith}{0}
 \setcounter{labelname}{0}
 \setcounter{savedlabelname}{0}
 \setcounter{institution}{0}
@@ -140,6 +154,8 @@
 \setcounter{savedlanguage}{0}
 \setcounter{origlanguage}{0}
 \setcounter{savedoriglanguage}{0}
+\setcounter{citation}{0}
+\setcounter{savedcitation}{0}
 \setcounter{pageref}{0}
 \setcounter{savedpageref}{0}
 \setcounter{textcitecount}{0}
@@ -153,9 +169,5 @@
 \setcounter{smartand}{1}
 \setcounter{bbx:relatedcount}{0}
 \setcounter{bbx:relatedtotal}{0}
-\setcounter{cbx@tempcnta}{0}
-\setcounter{cbx@tempcntb}{1}
-\setcounter{cbx@tempcntc}{0}
-\setcounter{cbx@tempcntd}{-1}
-\setcounter{lstlisting}{5}
+\setcounter{lstlisting}{9}
 }

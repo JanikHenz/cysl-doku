@@ -1,40 +1,40 @@
 \section{Einleitung}
 \label{sec:einleitung}
 
-\emph{dnchub-app} (auch bekannt als \emph{FleetOptima}) ist
-ein mandantenfähiges Flottenmanagement-System, das als Open-Source-Projekt auf
-GitHub verfügbar ist. Das System besteht aus einem Python/FastAPI-Backend und einem
-Next.js-Frontend und ist als SaaS-Plattform konzipiert, auf der mehrere unabhängige
-Organisationen ihre Fahrzeugflotten, Mitarbeiter, Werkzeuge und Verbrauchsmaterialien
-verwalten können.
+dnchub-app (FleetOptima) ist ein mandantenfähiges Flottenmanagement-System,
+das als Open-Source-Projekt auf GitHub verfügbar ist. Das System besteht
+aus einem Backend auf Basis von Python und FastAPI
+\parencite{fastapi_docs} sowie einem Frontend in TypeScript und Next.js.
+Es ist als SaaS-Plattform konzipiert, auf der mehrere unabhängige
+Organisationen ihre Fahrzeugflotten, Mitarbeiter, Werkzeuge und
+Verbrauchsmaterialien verwalten können.
 
 \subsection{Aufgabenstellung}
 
-Im Rahmen des Moduls CySL an der FHNW wurde ein nicht-trivialer,
+Im Rahmen des Moduls CYSL an der FHNW wurde ein
 sicherheitsrelevanter Patch für ein FOSS-Projekt auf GitHub als
-Prüfungsleistung gewählt. Die Wahl fiel auf eine kritische IDOR-Schwachstelle
-(GitHub Issue \#5, CVSS 9.3) \cite{github_issue_5}, die bei einem Code-Review
-des Repository-Owners identifiziert wurde und direkt mit einer zweiten
-Schwachstelle (GitHub Issue \#14) \cite{github_issue_14} zusammenhängt.
+Prüfungsleistung gewählt. Die Wahl fiel auf eine kritische
+IDOR-Schwachstelle aus Issue~\#5 \parencite{github_issue_5}, die bei einem
+Code-Review des Repository-Owners identifiziert wurde und direkt mit
+einer zweiten Schwachstelle aus Issue~\#14 \parencite{github_issue_14}
+zusammenhängt.
 
 Beide Issues sind miteinander verknüpft und können, laut Empfehlung des
 Repository-Owners, in einem einzigen Pull Request behoben werden. Der Dozent
-schätzt den Aufwand auf circa drei Tage (mit sauberem Testing eher vier Tage),
-was einer realistischen Einschätzung entspricht.
+schätzt den Aufwand auf circa drei Tage (mit sauberem Testing eher vier Tage).
 
 \subsection{Ziele}
 
-Das Ziel war kein punktueller Fix, der eine Fehlermeldung zum Verstummen
-bringt. Gesucht war eine Lösung an der Wurzel des Problems, deren Wirksamkeit
+Das Ziel war eine Lösung an der Wurzel des Problems, deren Wirksamkeit
 sich mit Tests beweisen lässt. Im Einzelnen:
 
 \begin{itemize}
       \item Analyse der verwundbaren Codebasis von \texttt{BaseService}
             bis zu allen abhängigen Aufrufern
-      \item Sicherer Fix für \texttt{get()} und
-            \texttt{get\_or\_404()} mit \texttt{organization\_id}-Scoping
-            und \texttt{deleted\_at}-Filterung; danach alle betroffenen
-            Aufrufer im Backend anpassen
+      \item Fix für \texttt{get()} und
+            \texttt{get\_or\_404()} mit \texttt{organization\_id}-
+            und \texttt{deleted\_at}-Filterung
+      \item Alle betroffenen Aufrufer im Backend anpassen
       \item Automatisierte Sicherheitstests, die die Schwachstelle auf
             dem Originalstand reproduzieren und den Fix verifizieren
       \item Vollständige Dokumentation des Vorgehens
@@ -45,8 +45,8 @@ sich mit Tests beweisen lässt. Im Einzelnen:
 Kapitel \ref{sec:grundlagen} legt die theoretischen Grundlagen zu IDOR,
 Multi-Tenant-Architektur und Soft-Delete-Mustern.
 Kapitel \ref{sec:analyse} zeigt, wo die Schwachstellen im Code stecken und
-wie viel des Backends betroffen ist (Phase 1).
+wie viel des Backends betroffen ist.
 Kapitel \ref{sec:implementierung} beschreibt den Patch und seine Ausbreitung
-auf alle Aufrufer (Phase 2).
-Kapitel \ref{sec:testing} dokumentiert Teststrategie und Ergebnisse (Phase 3).
+auf alle Aufrufer.
+Kapitel \ref{sec:testing} dokumentiert Teststrategie und Ergebnisse.
 Kapitel \ref{sec:schluss} zieht Bilanz.
